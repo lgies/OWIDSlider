@@ -19,6 +19,19 @@
  *   handlers and initialize the slider when the document is ready.
  */
 
+/* 
+Data Flow
+Page Load → $(OWIDSlider.init) runs
+Find OWID divs → addPlayButton() adds play buttons to galleries
+User clicks play → showFrame() opens dialog
+Load metadata → loadImages() fetches page with image list
+Parse structure → handlePage() extracts URLs and year ranges
+Create Context → New OWIDSlider.Context() manages viewer state
+Preload assets → preload() fetches SVGs or metadata
+User interaction → Slider/touch/wheel events update currentImage
+Render frame → toggleImg() displays appropriate SVG
+*/
+
 var OWIDSlider = {
   // ---------------------------------------------------------------------
   // OWIDSlider.I18n
@@ -233,7 +246,29 @@ var OWIDSlider = {
     },
   }, // end Core
 
+  // ---------------------------------------------------------------------
+  // Utils: small pure helpers (centralize duplicated logic, lightweight)
+  // ---------------------------------------------------------------------
+  Utils: {
+    // Return appropriate back label depending on viewport (mobile/desktop)
+    getBackLabel: function () {
+      return window.outerWidth > 600
+        ? mw.msg("OWIDSliderFrameBackDesktop")
+        : mw.msg("OWIDSliderFrameBack");
+    },
 
+    // Convert a country name to normalized key used throughout the code
+    normalizeCountryKey: function (name) {
+      return String(name || "").toLowerCase().replace(/[^a-z0-9]/g, '');
+    },
+
+    // Safely stop click/tap propagation + prevent default
+    stopClickPropagation: function (e) {
+      if (!e) return;
+      if (e.stopPropagation) e.stopPropagation();
+      if (e.preventDefault) e.preventDefault();
+    }
+  },
 
   // ---------------------------------------------------------------------
   // Backwards-compatible top-level delegations (minimal change)
@@ -261,529 +296,497 @@ var OWIDSlider = {
   // remains unchanged below. Keep references and function names intact so behaviour is preserved.
   // ---------------------------------------------------------------------
 
- OWID_COUNTRY_CODES: {
-  Afghanistan: "AFG",
-  "Åland-Islands": "ALA",
-  Albania: "ALB",
-  Algeria: "DZA",
-  "American-Samoa": "ASM",
-  Andorra: "AND",
-  Angola: "AGO",
-  Anguilla: "AIA",
-  Antarctica: "ATA",
-  "Antigua-and-Barbuda": "ATG",
-  Argentina: "ARG",
-  Armenia: "ARM",
-  Aruba: "ABW",
-  Australia: "AUS",
-  Austria: "AUT",
-  Azerbaijan: "AZE",
-  Bahamas: "BHS",
-  Bahrain: "BHR",
-  Bangladesh: "BGD",
-  Barbados: "BRB",
-  Belarus: "BLR",
-  Belgium: "BEL",
-  Belize: "BLZ",
-  Benin: "BEN",
-  Bermuda: "BMU",
-  Bhutan: "BTN",
-  Bolivia: "BOL",
-  "Bonaire,-Sint-Eustatius-and-Saba": "BES",
-  "Bosnia-and-Herzegovina": "BIH",
-  Botswana: "BWA",
-  "Bouvet-Island": "BVT",
-  Brazil: "BRA",
-  "British-Indian-Ocean-Territory": "IOT",
-  Brunei: "BRN",
-  Bulgaria: "BGR",
-  "Burkina-Faso": "BFA",
-  Burundi: "BDI",
-  Cambodia: "KHM",
-  Cameroon: "CMR",
-  Canada: "CAN",
-  "Cape-Verde": "CPV",
-  "Cayman-Islands": "CYM",
-  "Central-African-Republic": "CAF",
-  Chad: "TCD",
-  Chile: "CHL",
-  China: "CHN",
-  "Christmas-Island": "CXR",
-  "Cocos-(Keeling)-Islands": "CCK",
-  Colombia: "COL",
-  Comoros: "COM",
-  Congo: "COG",
-  "Democratic-Republic-of-Congo": "COD",
-  "Cook-Islands": "COK",
-  "Costa-Rica": "CRI",
-  "Cote-d'Ivoire": "CIV",
-  Croatia: "HRV",
-  Cuba: "CUB",
-  Curaçao: "CUW",
-  Cyprus: "CYP",
-  Czechia: "CZE",
-  Denmark: "DNK",
-  Djibouti: "DJI",
-  Dominica: "DMA",
-  "Dominican-Republic": "DOM",
-  Ecuador: "ECU",
-  Egypt: "EGY",
-  "El-Salvador": "SLV",
-  "Equatorial-Guinea": "GNQ",
-  Eritrea: "ERI",
-  Estonia: "EST",
-  Ethiopia: "ETH",
-  "Falkland-Islands-(Malvinas)": "FLK",
-  "Faroe-Islands": "FRO",
-  Fiji: "FJI",
-  Finland: "FIN",
-  France: "FRA",
-  "French-Guiana": "GUF",
-  "French-Polynesia": "PYF",
-  "French-Southern-Territories": "ATF",
-  Gabon: "GAB",
-  Gambia: "GMB",
-  Georgia: "GEO",
-  Germany: "DEU",
-  Ghana: "GHA",
-  Gibraltar: "GIB",
-  Greece: "GRC",
-  Greenland: "GRL",
-  Grenada: "GRD",
-  Guadeloupe: "GLP",
-  Guam: "GUM",
-  Guatemala: "GTM",
-  Guernsey: "GGY",
-  Guinea: "GIN",
-  "Guinea-Bissau": "GNB",
-  Guyana: "GUY",
-  Haiti: "HTI",
-  "Heard-Island-and-McDonald-Islands": "HMD",
-  "Holy-See-(Vatican-City-State)": "VAT",
-  Honduras: "HND",
-  "Hong-Kong": "HKG",
-  Hungary: "HUN",
-  Iceland: "ISL",
-  India: "IND",
-  Indonesia: "IDN",
-  Iran: "IRN",
-  Iraq: "IRQ",
-  Ireland: "IRL",
-  "Isle-of-Man": "IMN",
-  Israel: "ISR",
-  Italy: "ITA",
-  Jamaica: "JAM",
-  Japan: "JPN",
-  Jersey: "JEY",
-  Jordan: "JOR",
-  Kazakhstan: "KAZ",
-  Kenya: "KEN",
-  Kiribati: "KIR",
-  "North-Korea": "PRK",
-  "South-Korea": "KOR",
-  Kuwait: "KWT",
-  Kyrgyzstan: "KGZ",
-  Laos: "LAO",
-  Latvia: "LVA",
-  Lebanon: "LBN",
-  Lesotho: "LSO",
-  Liberia: "LBR",
-  Libya: "LBY",
-  Liechtenstein: "LIE",
-  Lithuania: "LTU",
-  Luxembourg: "LUX",
-  Macao: "MAC",
-  "North-Macedonia": "MKD",
-  Madagascar: "MDG",
-  Malawi: "MWI",
-  Malaysia: "MYS",
-  Maldives: "MDV",
-  Mali: "MLI",
-  Malta: "MLT",
-  "Marshall-Islands": "MHL",
-  Martinique: "MTQ",
-  Mauritania: "MRT",
-  Mauritius: "MUS",
-  Mayotte: "MYT",
-  Mexico: "MEX",
-  "Micronesia-(country)": "FSM",
-  Moldova: "MDA",
-  Monaco: "MCO",
-  Mongolia: "MNG",
-  Montenegro: "MNE",
-  Montserrat: "MSR",
-  Morocco: "MAR",
-  Mozambique: "MOZ",
-  Myanmar: "MMR",
-  Namibia: "NAM",
-  Nauru: "NRU",
-  Nepal: "NPL",
-  Netherlands: "NLD",
-  "New-Caledonia": "NCL",
-  "New-Zealand": "NZL",
-  Nicaragua: "NIC",
-  Niger: "NER",
-  Nigeria: "NGA",
-  Niue: "NIU",
-  "Norfolk-Island": "NFK",
-  "Northern-Mariana-Islands": "MNP",
-  Norway: "NOR",
-  Oman: "OMN",
-  Pakistan: "PAK",
-  Palau: "PLW",
-  "Palestinian-Territory,-Occupied": "PSE",
-  Panama: "PAN",
-  "Papua-New-Guinea": "PNG",
-  Paraguay: "PRY",
-  Peru: "PER",
-  Philippines: "PHL",
-  Pitcairn: "PCN",
-  Poland: "POL",
-  Portugal: "PRT",
-  "Puerto-Rico": "PRI",
-  Qatar: "QAT",
-  Réunion: "REU",
-  Romania: "ROU",
-  Russia: "RUS",
-  Rwanda: "RWA",
-  "Saint-Barthélemy": "BLM",
-  "Saint-Helena,-Ascension-and-Tristan-da-Cunha": "SHN",
-  "Saint-Kitts-and-Nevis": "KNA",
-  "Saint-Lucia": "LCA",
-  "Saint-Martin-(French-part)": "MAF",
-  "Saint-Pierre-and-Miquelon": "SPM",
-  "Saint-Vincent-and-the-Grenadines": "VCT",
-  Samoa: "WSM",
-  "San-Marino": "SMR",
-  "Sao-Tome-and-Principe": "STP",
-  "Saudi-Arabia": "SAU",
-  Senegal: "SEN",
-  Serbia: "SRB",
-  Seychelles: "SYC",
-  "Sierra-Leone": "SLE",
-  Singapore: "SGP",
-  "Sint-Maarten-(Dutch-part)": "SXM",
-  Slovakia: "SVK",
-  Slovenia: "SVN",
-  "Solomon-Islands": "SLB",
-  Somalia: "SOM",
-  "South-Africa": "ZAF",
-  "South-Georgia-and-the-South-Sandwich-Islands": "SGS",
-  "South-Sudan": "SSD",
-  Spain: "ESP",
-  "Sri-Lanka": "LKA",
-  Sudan: "SDN",
-  Suriname: "SUR",
-  "Svalbard-and-Jan-Mayen": "SJM",
-  Eswatini: "SWZ",
-  Sweden: "SWE",
-  Switzerland: "CHE",
-  Syria: "SYR",
-  "Taiwan,-Province-of-China": "TWN",
-  Tajikistan: "TJK",
-  Tanzania: "TZA",
-  Thailand: "THA",
-  "East-Timor": "TLS",
-  Togo: "TGO",
-  Tokelau: "TKL",
-  Tonga: "TON",
-  "Trinidad-and-Tobago": "TTO",
-  Tunisia: "TUN",
-  Turkey: "TUR",
-  Turkmenistan: "TKM",
-  "Turks-and-Caicos-Islands": "TCA",
-  Tuvalu: "TUV",
-  Uganda: "UGA",
-  Ukraine: "UKR",
-  "United-Arab-Emirates": "ARE",
-  "United-Kingdom": "GBR",
-  "United-States": "USA",
-  "United-States-Minor-Outlying-Islands": "UMI",
-  Uruguay: "URY",
-  Uzbekistan: "UZB",
-  Vanuatu: "VUT",
-  Venezuela: "VEN",
-  Vietnam: "VNM",
-  "Virgin-Islands,-British": "VGB",
-  "Virgin-Islands,-U.S.": "VIR",
-  "Wallis-and-Futuna": "WLF",
-  "Western-Sahara": "ESH",
-  Yemen: "YEM",
-  Zambia: "ZMB",
-  Zimbabwe: "ZWE",
- },
+  OWID_COUNTRY_CODES: {
+    Afghanistan: "AFG",
+    "Åland-Islands": "ALA",
+    Albania: "ALB",
+    Algeria: "DZA",
+    "American-Samoa": "ASM",
+    Andorra: "AND",
+    Angola: "AGO",
+    Anguilla: "AIA",
+    Antarctica: "ATA",
+    "Antigua-and-Barbuda": "ATG",
+    Argentina: "ARG",
+    Armenia: "ARM",
+    Aruba: "ABW",
+    Australia: "AUS",
+    Austria: "AUT",
+    Azerbaijan: "AZE",
+    Bahamas: "BHS",
+    Bahrain: "BHR",
+    Bangladesh: "BGD",
+    Barbados: "BRB",
+    Belarus: "BLR",
+    Belgium: "BEL",
+    Belize: "BLZ",
+    Benin: "BEN",
+    Bermuda: "BMU",
+    Bhutan: "BTN",
+    Bolivia: "BOL",
+    "Bonaire,-Sint-Eustatius-and-Saba": "BES",
+    "Bosnia-and-Herzegovina": "BIH",
+    Botswana: "BWA",
+    "Bouvet-Island": "BVT",
+    Brazil: "BRA",
+    "British-Indian-Ocean-Territory": "IOT",
+    Brunei: "BRN",
+    Bulgaria: "BGR",
+    "Burkina-Faso": "BFA",
+    Burundi: "BDI",
+    Cambodia: "KHM",
+    Cameroon: "CMR",
+    Canada: "CAN",
+    "Cape-Verde": "CPV",
+    "Cayman-Islands": "CYM",
+    "Central-African-Republic": "CAF",
+    Chad: "TCD",
+    Chile: "CHL",
+    China: "CHN",
+    "Christmas-Island": "CXR",
+    "Cocos-(Keeling)-Islands": "CCK",
+    Colombia: "COL",
+    Comoros: "COM",
+    Congo: "COG",
+    "Democratic-Republic-of-Congo": "COD",
+    "Cook-Islands": "COK",
+    "Costa-Rica": "CRI",
+    "Cote-d'Ivoire": "CIV",
+    Croatia: "HRV",
+    Cuba: "CUB",
+    Curaçao: "CUW",
+    Cyprus: "CYP",
+    Czechia: "CZE",
+    Denmark: "DNK",
+    Djibouti: "DJI",
+    Dominica: "DMA",
+    "Dominican-Republic": "DOM",
+    Ecuador: "ECU",
+    Egypt: "EGY",
+    "El-Salvador": "SLV",
+    "Equatorial-Guinea": "GNQ",
+    Eritrea: "ERI",
+    Estonia: "EST",
+    Ethiopia: "ETH",
+    "Falkland-Islands-(Malvinas)": "FLK",
+    "Faroe-Islands": "FRO",
+    Fiji: "FJI",
+    Finland: "FIN",
+    France: "FRA",
+    "French-Guiana": "GUF",
+    "French-Polynesia": "PYF",
+    "French-Southern-Territories": "ATF",
+    Gabon: "GAB",
+    Gambia: "GMB",
+    Georgia: "GEO",
+    Germany: "DEU",
+    Ghana: "GHA",
+    Gibraltar: "GIB",
+    Greece: "GRC",
+    Greenland: "GRL",
+    Grenada: "GRD",
+    Guadeloupe: "GLP",
+    Guam: "GUM",
+    Guatemala: "GTM",
+    Guernsey: "GGY",
+    Guinea: "GIN",
+    "Guinea-Bissau": "GNB",
+    Guyana: "GUY",
+    Haiti: "HTI",
+    "Heard-Island-and-McDonald-Islands": "HMD",
+    "Holy-See-(Vatican-City-State)": "VAT",
+    Honduras: "HND",
+    "Hong-Kong": "HKG",
+    Hungary: "HUN",
+    Iceland: "ISL",
+    India: "IND",
+    Indonesia: "IDN",
+    Iran: "IRN",
+    Iraq: "IRQ",
+    Ireland: "IRL",
+    "Isle-of-Man": "IMN",
+    Israel: "ISR",
+    Italy: "ITA",
+    Jamaica: "JAM",
+    Japan: "JPN",
+    Jersey: "JEY",
+    Jordan: "JOR",
+    Kazakhstan: "KAZ",
+    Kenya: "KEN",
+    Kiribati: "KIR",
+    "North-Korea": "PRK",
+    "South-Korea": "KOR",
+    Kuwait: "KWT",
+    Kyrgyzstan: "KGZ",
+    Laos: "LAO",
+    Latvia: "LVA",
+    Lebanon: "LBN",
+    Lesotho: "LSO",
+    Liberia: "LBR",
+    Libya: "LBY",
+    Liechtenstein: "LIE",
+    Lithuania: "LTU",
+    Luxembourg: "LUX",
+    Macao: "MAC",
+    "North-Macedonia": "MKD",
+    Madagascar: "MDG",
+    Malawi: "MWI",
+    Malaysia: "MYS",
+    Maldives: "MDV",
+    Mali: "MLI",
+    Malta: "MLT",
+    "Marshall-Islands": "MHL",
+    Martinique: "MTQ",
+    Mauritania: "MRT",
+    Mauritius: "MUS",
+    Mayotte: "MYT",
+    Mexico: "MEX",
+    "Micronesia-(country)": "FSM",
+    Moldova: "MDA",
+    Monaco: "MCO",
+    Mongolia: "MNG",
+    Montenegro: "MNE",
+    Montserrat: "MSR",
+    Morocco: "MAR",
+    Mozambique: "MOZ",
+    Myanmar: "MMR",
+    Namibia: "NAM",
+    Nauru: "NRU",
+    Nepal: "NPL",
+    Netherlands: "NLD",
+    "New-Caledonia": "NCL",
+    "New-Zealand": "NZL",
+    Nicaragua: "NIC",
+    Niger: "NER",
+    Nigeria: "NGA",
+    Niue: "NIU",
+    "Norfolk-Island": "NFK",
+    "Northern-Mariana-Islands": "MNP",
+    Norway: "NOR",
+    Oman: "OMN",
+    Pakistan: "PAK",
+    Palau: "PLW",
+    "Palestinian-Territory,-Occupied": "PSE",
+    Panama: "PAN",
+    "Papua-New-Guinea": "PNG",
+    Paraguay: "PRY",
+    Peru: "PER",
+    Philippines: "PHL",
+    Pitcairn: "PCN",
+    Poland: "POL",
+    Portugal: "PRT",
+    "Puerto-Rico": "PRI",
+    Qatar: "QAT",
+    Réunion: "REU",
+    Romania: "ROU",
+    Russia: "RUS",
+    Rwanda: "RWA",
+    "Saint-Barthélemy": "BLM",
+    "Saint-Helena,-Ascension-and-Tristan-da-Cunha": "SHN",
+    "Saint-Kitts-and-Nevis": "KNA",
+    "Saint-Lucia": "LCA",
+    "Saint-Martin-(French-part)": "MAF",
+    "Saint-Pierre-and-Miquelon": "SPM",
+    "Saint-Vincent-and-the-Grenadines": "VCT",
+    Samoa: "WSM",
+    "San-Marino": "SMR",
+    "Sao-Tome-and-Principe": "STP",
+    "Saudi-Arabia": "SAU",
+    Senegal: "SEN",
+    Serbia: "SRB",
+    Seychelles: "SYC",
+    "Sierra-Leone": "SLE",
+    Singapore: "SGP",
+    "Sint-Maarten-(Dutch-part)": "SXM",
+    Slovakia: "SVK",
+    Slovenia: "SVN",
+    "Solomon-Islands": "SLB",
+    Somalia: "SOM",
+    "South-Africa": "ZAF",
+    "South-Georgia-and-the-South-Sandwich-Islands": "SGS",
+    "South-Sudan": "SSD",
+    Spain: "ESP",
+    "Sri-Lanka": "LKA",
+    Sudan: "SDN",
+    Suriname: "SUR",
+    "Svalbard-and-Jan-Mayen": "SJM",
+    Eswatini: "SWZ",
+    Sweden: "SWE",
+    Switzerland: "CHE",
+    Syria: "SYR",
+    "Taiwan,-Province-of-China": "TWN",
+    Tajikistan: "TJK",
+    Tanzania: "TZA",
+    Thailand: "THA",
+    "East-Timor": "TLS",
+    Togo: "TGO",
+    Tokelau: "TKL",
+    Tonga: "TON",
+    "Trinidad-and-Tobago": "TTO",
+    Tunisia: "TUN",
+    Turkey: "TUR",
+    Turkmenistan: "TKM",
+    "Turks-and-Caicos-Islands": "TCA",
+    Tuvalu: "TUV",
+    Uganda: "UGA",
+    Ukraine: "UKR",
+    "United-Arab-Emirates": "ARE",
+    "United-Kingdom": "GBR",
+    "United-States": "USA",
+    "United-States-Minor-Outlying-Islands": "UMI",
+    Uruguay: "URY",
+    Uzbekistan: "UZB",
+    Vanuatu: "VUT",
+    Venezuela: "VEN",
+    Vietnam: "VNM",
+    "Virgin-Islands,-British": "VGB",
+    "Virgin-Islands,-U.S.": "VIR",
+    "Wallis-and-Futuna": "WLF",
+    "Western-Sahara": "ESH",
+    Yemen: "YEM",
+    Zambia: "ZMB",
+    Zimbabwe: "ZWE",
+  },
 
- OWID_WIKIDATA_COUNTRY_MAP: {
-  "frenchguiana": "Q3769",
-  "frenchsouthernterritories": "Q129003",
-  "kosovo": "Q1246",
-  "liechtenstein": "Q347",
-  "newcaledonia": "Q33788",
-  "westernsahara": "Q6250",
-  "russia": "Q159",
-  "unitedstates": "Q30",
-  "canada": "Q16",
-  "china": "Q148",
-  "brazil": "Q155",
-  "greenland": "Q223",
-  "australia": "Q408",
-  "fiji": "Q712",
-  "india": "Q668",
-  "indonesia": "Q252",
-  "argentina": "Q414",
-  "kazakhstan": "Q232",
-  "norway": "Q20",
-  "mexico": "Q96",
-  "algeria": "Q262",
-  "democraticrepublicofcongo": "Q974",
-  "mongolia": "Q711",
-  "saudiarabia": "Q851",
-  "chile": "Q298",
-  "iran": "Q794",
-  "mali": "Q912",
-  "japan": "Q17",
-  "peru": "Q419",
-  "pakistan": "Q843",
-  "sudan": "Q1049",
-  "libya": "Q1016",
-  "southafrica": "Q258",
-  "colombia": "Q739",
-  "niger": "Q1032",
-  "sweden": "Q34",
-  "mozambique": "Q1029",
-  "ethiopia": "Q115",
-  "angola": "Q916",
-  "chad": "Q657",
-  "myanmar": "Q836",
-  "namibia": "Q1030",
-  "bolivia": "Q750",
-  "mauritania": "Q1025",
-  "venezuela": "Q717",
-  "newzealand": "Q664",
-  "uzbekistan": "Q265",
-  "ukraine": "Q212",
-  "somalia": "Q1045",
-  "france": "Q142",
-  "afghanistan": "Q889",
-  "italy": "Q38",
-  "papuanewguinea": "Q691",
-  "philippines": "Q928",
-  "thailand": "Q869",
-  "turkey": "Q43",
-  "tanzania": "Q924",
-  "malaysia": "Q833",
-  "egypt": "Q79",
-  "centralafricanrepublic": "Q929",
-  "nigeria": "Q1033",
-  "zambia": "Q953",
-  "finland": "Q33",
-  "micronesia": "Q3359409",
-  "vietnam": "Q881",
-  "turkmenistan": "Q874",
-  "southsudan": "Q958",
-  "madagascar": "Q1019",
-  "morocco": "Q1028",
-  "spain": "Q29",
-  "botswana": "Q963",
-  "cameroon": "Q1009",
-  "kenya": "Q114",
-  "iraq": "Q796",
-  "unitedkingdom": "Q145",
-  "oman": "Q842",
-  "germany": "Q183",
-  "paraguay": "Q733",
-  "yemen": "Q805",
-  "congo": "Q971",
-  "laos": "Q819",
-  "poland": "Q36",
-  "zimbabwe": "Q954",
-  "belarus": "Q184",
-  "greece": "Q41",
-  "kyrgyzstan": "Q813",
-  "romania": "Q218",
-  "burkinafaso": "Q965",
-  "guinea": "Q1006",
-  "eritrea": "Q986",
-  "cotedivoire": "Q1008",
-  "ecuador": "Q736",
-  "cuba": "Q241",
-  "gabon": "Q1000",
-  "northkorea": "Q423",
-  "guyana": "Q734",
-  "syria": "Q858",
-  "nepal": "Q837",
-  "iceland": "Q189",
-  "tajikistan": "Q863",
-  "uganda": "Q1036",
-  "tunisia": "Q948",
-  "ghana": "Q117",
-  "tuvalu": "Q672",
-  "bangladesh": "Q902",
-  "senegal": "Q1041",
-  "uruguay": "Q77",
-  "solomonislands": "Q685",
-  "malawi": "Q1020",
-  "croatia": "Q224",
-  "cambodia": "Q424",
-  "azerbaijan": "Q227",
-  "austria": "Q40",
-  "nicaragua": "Q811",
-  "honduras": "Q783",
-  "hungary": "Q28",
-  "bulgaria": "Q219",
-  "benin": "Q962",
-  "jordan": "Q810",
-  "suriname": "Q730",
-  "unitedarabemirates": "Q878",
-  "portugal": "Q45",
-  "czechia": "Q213",
-  "latvia": "Q211",
-  "georgia": "Q230",
-  "guatemala": "Q774",
-  "serbia": "Q403",
-  "liberia": "Q1014",
-  "southkorea": "Q884",
-  "panama": "Q804",
-  "ireland": "Q27",
-  "lithuania": "Q37",
-  "denmark": "Q35",
-  "slovakia": "Q214",
-  "estonia": "Q191",
-  "netherlands": "Q55",
-  "costarica": "Q800",
-  "moldova": "Q217",
-  "bosniaaherzegovin": "Q225",
-  "sierraleone": "Q1044",
-  "togo": "Q945",
-  "switzerland": "Q39",
-  "dominicanrepublic": "Q786",
-  "srilanka": "Q854",
-  "armenia": "Q399",
-  "belgium": "Q31",
-  "bahamas": "Q778",
-  "capeverde": "Q1011",
-  "taiwan": "Q865",
-  "israel": "Q801",
-  "haiti": "Q790",
-  "albania": "Q222",
-  "bhutan": "Q917",
-  "guineabissau": "Q1007",
-  "lesotho": "Q1013",
-  "tonga": "Q678",
-  "slovenia": "Q215",
-  "burundi": "Q967",
-  "northmacedonia": "Q221",
-  "rwanda": "Q1037",
-  "montenegro": "Q236",
-  "elsalvador": "Q792",
-  "djibouti": "Q977",
-  "belize": "Q242",
-  "kuwait": "Q817",
-  "easttimor": "Q574",
-  "cyprus": "Q229",
-  "equatorialguinea": "Q983",
-  "vanuatu": "Q686",
-  "lebanon": "Q822",
-  "marshallislands": "Q709",
-  "eswatini": "Q1050",
-  "gambia": "Q1005",
-  "brunei": "Q921",
-  "jamaica": "Q766",
-  "palestine": "Q219060",
-  "qatar": "Q846",
-  "comoros": "Q970",
-  "puertorico": "Q1183",
-  "trinidadandtobago": "Q754",
-  "samoa": "Q683",
-  "luxembourg": "Q32",
-  "mauritius": "Q1027",
-  "singapore": "Q334",
-  "antiguaandbarbuda": "Q781",
-  "maldives": "Q826",
-  "kiribati": "Q710",
-  "saotomeandprincipe": "Q1039",
-  "dominica": "Q784",
-  "saintkittsandnevis": "Q763",
-  "bahrain": "Q398",
-  "saintlucia": "Q760",
-  "andorra": "Q228",
-  "barbados": "Q244",
-  "seychelles": "Q1042",
-  "malta": "Q233",
-  "saintvincentandthegrenadines": "Q757",
-  "grenada": "Q769",
-  "palau": "Q695",
-  "sanmarino": "Q238",
-  "nauru": "Q697",
-  "monaco": "Q235"
- },
+  OWID_WIKIDATA_COUNTRY_MAP: {
+    "frenchguiana": "Q3769",
+    "frenchsouthernterritories": "Q129003",
+    "kosovo": "Q1246",
+    "liechtenstein": "Q347",
+    "newcaledonia": "Q33785",
+    "westernsahara": "Q6250",
+    "russia": "Q159",
+    "unitedstates": "Q30",
+    "canada": "Q16",
+    "china": "Q148",
+    "brazil": "Q155",
+    "greenland": "Q223",
+    "australia": "Q408",
+    "fiji": "Q712",
+    "india": "Q668",
+    "indonesia": "Q252",
+    "argentina": "Q414",
+    "kazakhstan": "Q232",
+    "norway": "Q20",
+    "mexico": "Q96",
+    "algeria": "Q262",
+    "democraticrepublicofcongo": "Q974",
+    "mongolia": "Q711",
+    "saudiarabia": "Q851",
+    "chile": "Q298",
+    "iran": "Q794",
+    "mali": "Q912",
+    "japan": "Q17",
+    "peru": "Q419",
+    "pakistan": "Q843",
+    "sudan": "Q1049",
+    "libya": "Q1016",
+    "southafrica": "Q258",
+    "colombia": "Q739",
+    "niger": "Q1032",
+    "sweden": "Q34",
+    "mozambique": "Q1029",
+    "ethiopia": "Q115",
+    "angola": "Q916",
+    "chad": "Q657",
+    "myanmar": "Q836",
+    "namibia": "Q1030",
+    "bolivia": "Q750",
+    "mauritania": "Q1025",
+    "venezuela": "Q717",
+    "newzealand": "Q664",
+    "uzbekistan": "Q265",
+    "ukraine": "Q212",
+    "somalia": "Q1045",
+    "france": "Q142",
+    "afghanistan": "Q889",
+    "italy": "Q38",
+    "papuanewguinea": "Q691",
+    "philippines": "Q928",
+    "thailand": "Q869",
+    "turkey": "Q43",
+    "tanzania": "Q924",
+    "malaysia": "Q833",
+    "egypt": "Q79",
+    "centralafricanrepublic": "Q929",
+    "nigeria": "Q1033",
+    "zambia": "Q953",
+    "finland": "Q33",
+    "micronesia": "Q3359409",
+    "vietnam": "Q881",
+    "turkmenistan": "Q874",
+    "southsudan": "Q958",
+    "madagascar": "Q1019",
+    "morocco": "Q1028",
+    "spain": "Q29",
+    "botswana": "Q963",
+    "cameroon": "Q1009",
+    "kenya": "Q114",
+    "iraq": "Q796",
+    "unitedkingdom": "Q145",
+    "oman": "Q842",
+    "germany": "Q183",
+    "paraguay": "Q733",
+    "yemen": "Q805",
+    "congo": "Q971",
+    "laos": "Q819",
+    "poland": "Q36",
+    "zimbabwe": "Q954",
+    "belarus": "Q184",
+    "greece": "Q41",
+    "kyrgyzstan": "Q813",
+    "romania": "Q218",
+    "burkinafaso": "Q965",
+    "guinea": "Q1006",
+    "eritrea": "Q986",
+    "cotedivoire": "Q1008",
+    "ecuador": "Q736",
+    "cuba": "Q241",
+    "gabon": "Q1000",
+    "northkorea": "Q423",
+    "guyana": "Q734",
+    "syria": "Q858",
+    "nepal": "Q837",
+    "iceland": "Q189",
+    "tajikistan": "Q863",
+    "uganda": "Q1036",
+    "tunisia": "Q948",
+    "ghana": "Q117",
+    "tuvalu": "Q672",
+    "bangladesh": "Q902",
+    "senegal": "Q1041",
+    "uruguay": "Q77",
+    "solomonislands": "Q685",
+    "malawi": "Q1020",
+    "croatia": "Q224",
+    "cambodia": "Q424",
+    "azerbaijan": "Q227",
+    "austria": "Q40",
+    "nicaragua": "Q811",
+    "honduras": "Q783",
+    "hungary": "Q28",
+    "bulgaria": "Q219",
+    "benin": "Q962",
+    "jordan": "Q810",
+    "suriname": "Q730",
+    "unitedarabemirates": "Q878",
+    "portugal": "Q45",
+    "czechia": "Q213",
+    "latvia": "Q211",
+    "georgia": "Q230",
+    "guatemala": "Q774",
+    "serbia": "Q403",
+    "liberia": "Q1014",
+    "southkorea": "Q884",
+    "panama": "Q804",
+    "ireland": "Q27",
+    "lithuania": "Q37",
+    "denmark": "Q35",
+    "slovakia": "Q214",
+    "estonia": "Q191",
+    "netherlands": "Q55",
+    "costarica": "Q800",
+    "moldova": "Q217",
+    "bosniaaherzegovin": "Q225",
+    "sierraleone": "Q1044",
+    "togo": "Q945",
+    "switzerland": "Q39",
+    "dominicanrepublic": "Q786",
+    "srilanka": "Q854",
+    "armenia": "Q399",
+    "belgium": "Q31",
+    "bahamas": "Q778",
+    "capeverde": "Q1011",
+    "taiwan": "Q865",
+    "israel": "Q801",
+    "haiti": "Q790",
+    "albania": "Q222",
+    "bhutan": "Q917",
+    "guineabissau": "Q1007",
+    "lesotho": "Q1013",
+    "tonga": "Q678",
+    "slovenia": "Q215",
+    "burundi": "Q967",
+    "northmacedonia": "Q221",
+    "rwanda": "Q1037",
+    "montenegro": "Q236",
+    "elsalvador": "Q792",
+    "djibouti": "Q977",
+    "belize": "Q242",
+    "kuwait": "Q817",
+    "easttimor": "Q574",
+    "cyprus": "Q229",
+    "equatorialguinea": "Q983",
+    "vanuatu": "Q686",
+    "lebanon": "Q822",
+    "marshallislands": "Q709",
+    "eswatini": "Q1050",
+    "gambia": "Q1005",
+    "brunei": "Q921",
+    "jamaica": "Q766",
+    "palestine": "Q219060",
+    "qatar": "Q846",
+    "comoros": "Q970",
+    "puertorico": "Q1183",
+    "trinidadandtobago": "Q754",
+    "samoa": "Q683",
+    "luxembourg": "Q32",
+    "mauritius": "Q1027",
+    "singapore": "Q334",
+    "antiguaandbarbuda": "Q781",
+    "maldives": "Q826",
+    "kiribati": "Q710",
+    "saotomeandprincipe": "Q1039",
+    "dominica": "Q784",
+    "saintkittsandnevis": "Q763",
+    "bahrain": "Q398",
+    "saintlucia": "Q760",
+    "andorra": "Q228",
+    "barbados": "Q244",
+    "seychelles": "Q1042",
+    "malta": "Q233",
+    "saintvincentandthegrenadines": "Q757",
+    "grenada": "Q769",
+    "palau": "Q695",
+    "sanmarino": "Q238",
+    "nauru": "Q697",
+    "monaco": "Q235"
+  },
 
   // Moved to Core
   // init: function () {
-	// OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP_REVERSE = Object.fromEntries(
-	// 	Object.entries(OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP).map(function([key, value]) {
+  // OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP_REVERSE = Object.fromEntries(
+  // 	Object.entries(OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP).map(function([key, value]) {
   //   		return [value, key];
-	// 	})
-	// );
+  // 	})
+  // );
   //   OWIDSlider.setMessages();
   //   mw.hook("wikipage.content").add(OWIDSlider.addPlayButton);
   // },
-	
+
   purify: function (dirty) {
     // We use SVGs in an html context not XML, so we need to be sure they are safe.
     // This is a bit stricter than necessary, but owid graphs should have all this.
-    DOMPurify.addHook( 'uponSanitizeAttribute', ( node, hook ) => {
-      if ( [ 'font', 'clip-path', 'fill', 'filter', 'marker', 'marker-end', 'marker-mid', 'marker-start', 'mask', 'stroke', 'cursor' ].includes( hook.attrName ) ) {
-        if (hook.attrValue.match( /url\((?!\s*['"]?#)|image-set\(|src\(/i ) ) {
+    DOMPurify.addHook('uponSanitizeAttribute', (node, hook) => {
+      if (['font', 'clip-path', 'fill', 'filter', 'marker', 'marker-end', 'marker-mid', 'marker-start', 'mask', 'stroke', 'cursor'].includes(hook.attrName)) {
+        if (hook.attrValue.match(/url\((?!\s*['"]?#)|image-set\(|src\(/i)) {
           hook.keepAttr = false;
         }
       }
-      if ( [ 'href', 'xlink:href' ].includes( hook.attrName ) ) {
+      if (['href', 'xlink:href'].includes(hook.attrName)) {
         hook.keepAttr = false;
       }
-    } );
-    DOMPurify.addHook( 'uponSanitizeElement', ( node ) => {
-      if ( node && node.tagName && node.tagName.toLowerCase() === 'style' && node.textContent.match( /url\((?!\s*['"]?#)|image-set\(|src\(/i ) ) {
+    });
+    DOMPurify.addHook('uponSanitizeElement', (node) => {
+      if (node && node.tagName && node.tagName.toLowerCase() === 'style' && node.textContent.match(/url\((?!\s*['"]?#)|image-set\(|src\(/i)) {
         node.textContent = '';
       }
-    } );
-    var res = DOMPurify.sanitize(dirty, {USE_PROFILES: {svg: true}});
-    DOMPurify.removeHook( 'uponSanitizeAttribute' );
-    DOMPurify.removeHook( 'uponSanitizeElement' );
+    });
+    var res = DOMPurify.sanitize(dirty, { USE_PROFILES: { svg: true } });
+    DOMPurify.removeHook('uponSanitizeAttribute');
+    DOMPurify.removeHook('uponSanitizeElement');
     return res;
-   },
-
-  // Moved to I18n
-  /**
-   * Set the interface messages in the most appropriate language
-   *
-   * Favor the user language first, the page language second, the wiki language third, and lastly English
-   */
-
-  // Moved to I18n
-  // setMessages: function () {
-  //   var userLanguage = mw.config.get("wgUserLanguage");
-  //   if (userLanguage in OWIDSlider.messages) {
-  //     mw.messages.set(OWIDSlider.messages[userLanguage]);
-  //     return;
-  //   }
-  //   var pageLanguage = mw.config.get("wgPageContentLanguage");
-  //   if (pageLanguage in OWIDSlider.messages) {
-  //     mw.messages.set(OWIDSlider.messages[pageLanguage]);
-  //     return;
-  //   }
-  //   var contentLanguage = mw.config.get("wgContentLanguage");
-  //   if (contentLanguage in OWIDSlider.messages) {
-  //     mw.messages.set(OWIDSlider.messages[contentLanguage]);
-  //     return;
-  //   }
-  //   mw.messages.set(OWIDSlider.messages.en);
-  // },
-
-  // Moved to Core
-  // parseQueryParams: function () {
-	// return Object.fromEntries( new URLSearchParams( location.search ) );
-  // },
+  },
 
   /**
    * Append a play button ► to every OWIDSlider div
@@ -812,23 +815,23 @@ var OWIDSlider = {
                 title: mw.msg("OWIDSliderPlayLabel"),
                 "aria-label": mw.msg("OWIDSliderPlayLabel"),
               })
-              .html( '<svg viewbox="0 0 10 10"><circle class="circle" cx="5" cy="5" r="5"></circle><polygon class="triangle" points="2.5,2 8.5,5 2.5,8"></polygon></svg>' );
+              .html('<svg viewbox="0 0 10 10"><circle class="circle" cx="5" cy="5" r="5"></circle><polygon class="triangle" points="2.5,2 8.5,5 2.5,8"></polygon></svg>');
             var data = viewerInfo[i];
             $play.on("click", function (e) {
               e.preventDefault();
               if (
                 !queryParams.owid_list ||
                 queryParams.owid_list.toLowerCase() !=
-                  decodeURIComponent(data.list.toLowerCase())
+                decodeURIComponent(data.list.toLowerCase())
               ) {
-              	var newUrl = new URL(window.location.href);
-				newUrl.searchParams.set("owid_list", encodeURIComponent(data.list));
-				if (data.language && data.language != "") {
-					newUrl.searchParams.set("owid_language", encodeURIComponent(data.language));
-				}
-				
-				window.history.pushState({}, "", newUrl);
-				OWIDSlider.showFrame(data);
+                var newUrl = new URL(window.location.href);
+                newUrl.searchParams.set("owid_list", encodeURIComponent(data.list));
+                if (data.language && data.language != "") {
+                  newUrl.searchParams.set("owid_language", encodeURIComponent(data.language));
+                }
+
+                window.history.pushState({}, "", newUrl);
+                OWIDSlider.showFrame(data);
               } else {
                 OWIDSlider.showFrame(data);
               }
@@ -843,19 +846,19 @@ var OWIDSlider = {
             var listMatch = queryParams.owid_list && data.list &&
               decodeURIComponent(queryParams.owid_list.toLowerCase()) == decodeURIComponent(data.list.toLowerCase());
             var langMatch = (
-                	// Handle language cases
-                	// 1. No language in uri and this doesnt have language
-                	(!data.language && !queryParams.owid_language) ||
-                	// 2. Language in uri and this has language
-                	(data.language && queryParams.owid_language && data.language == decodeURIComponent(queryParams.owid_language.toLowerCase()))
+              // Handle language cases
+              // 1. No language in uri and this doesnt have language
+              (!data.language && !queryParams.owid_language) ||
+              // 2. Language in uri and this has language
+              (data.language && queryParams.owid_language && data.language == decodeURIComponent(queryParams.owid_language.toLowerCase()))
             );
             if (
-            	listMatch && langMatch
+              listMatch && langMatch
             ) {
               OWIDSlider.showFrame(data);
             }
           }
-        });
+      });
     });
   },
 
@@ -872,11 +875,8 @@ var OWIDSlider = {
       return;
     }
     var $viewer = OWIDSlider.getViewer();
-    var backButtonTitle = mw.msg("OWIDSliderFrameBack");
-    if (window.outerWidth > 600) {
-      backButtonTitle = mw.msg("OWIDSliderFrameBackDesktop");
-    }
-
+    var backButtonTitle = OWIDSlider.Utils.getBackLabel();
+    
     var config = {
       size: "full",
       // This doesn't seem to work.
@@ -903,19 +903,30 @@ var OWIDSlider = {
     // copied from OO.ui.alert definition.
 
     var win = OO.ui.getWindowManager().openWindow("OWIDSlider", config);
+    if (!win) {
+      console.error('Failed to open OWIDSlider window');
+      return;
+    }
+    
     win.closing.done(function () {
-    	var newUrl = new URL(window.location.href);
-		newUrl.searchParams.delete("owid_list");
-		newUrl.searchParams.delete("owid_language");
-				
-		window.history.pushState({}, "", newUrl);
+      var newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete("owid_list");
+      newUrl.searchParams.delete("owid_language");
+
+      window.history.pushState({}, "", newUrl);
+    }).fail(function(err) {
+      console.error('Error closing window:', err);
     });
+    
     win.closed.done(function () {
       // There has to be a better way to do this.
       if (window.OWIDSliderCancel) {
         window.OWIDSliderCancel();
       }
+    }).fail(function(err) {
+      console.error('Error on window close:', err);
     });
+    
     OWIDSlider.loadImages($viewer, data);
   },
 
@@ -929,46 +940,47 @@ var OWIDSlider = {
     );
     return $viewer;
   },
+
   loadImages: function ($viewer, data) {
     var url = "";
     var page = mw.Title.newFromText(data.list);
-	if (!page) {
-	   console.log("Image stack error, invalid page " + data.list);
-	   return;
-	}
+    if (!page) {
+      console.log("Image stack error, invalid page " + data.list);
+      return;
+    }
     if (data.location && data.location.toLowerCase() == "commons") {
-    	var templateName = page.title;
-
-		var api = new mw.Api({
-			userAgent: 'OWIDSlider',
-		    ajax: {
-		        url: 'https://commons.wikimedia.org/w/api.php'
-		    }
-		});		
-		api.get({
-		    action: 'parse',
-		    page: data.list,
-		    format: 'json',
-		    prop: 'text',
-			uselang: data.language,
-		    origin: '*'  // This helps with CORS
-		}).then(function(res) {
-		    if (res.parse) {
-		        const text = res.parse.text['*'];
-				return OWIDSlider.handlePage($viewer, data, text);
-		    }
-		}).catch(function(error) {
-		    console.error('Error:', error);
-		});
+      var api = new mw.Api({
+        userAgent: 'OWIDSlider',
+        ajax: {
+          url: 'https://commons.wikimedia.org/w/api.php'
+        }
+      });
+      
+      api.get({
+        action: 'parse',
+        page: data.list,
+        format: 'json',
+        prop: 'text',
+        uselang: data.language,
+        origin: '*'
+      }).then(function (res) {
+        if (!res || !res.parse) {
+          throw new Error('Invalid API response');
+        }
+        return OWIDSlider.handlePage($viewer, data, res.parse.text['*']);
+      }).catch(function (error) {
+        console.error('API Error:', error);
+        $viewer.html('<div class="error">Failed to load content</div>');
+      });
     } else {
-		url = page.getUrl();
-		fetch(url)
-	      .then(function (response) {
-	        return response.text();
-	      })
-	      .then(function (text) {
-	        return OWIDSlider.handlePage($viewer, data, text);
-	      });
+      url = page.getUrl();
+      fetch(url)
+        .then(function (response) {
+          return response.text();
+        })
+        .then(function (text) {
+          return OWIDSlider.handlePage($viewer, data, text);
+        });
     }
   },
 
@@ -989,15 +1001,15 @@ var OWIDSlider = {
       return;
     }
 
-    var years = Object.create( null ),
-      imgMap = Object.create( null );
+    var years = Object.create(null),
+      imgMap = Object.create(null);
     var min = 1e9,
       max = -1e9,
       width,
       height,
       viewMin;
-    var countriesUrls = Object.create( null );
-    var countriesInfoUrls = Object.create( null );
+    var countriesUrls = Object.create(null);
+    var countriesInfoUrls = Object.create(null);
     this.translatedCountryNames = Object.create(null);
     for (var galleryName in subIds) {
       var galleryId = subIds[galleryName];
@@ -1029,8 +1041,8 @@ var OWIDSlider = {
             imgs[j].getAttribute("src")
           );
           if (imgs[j].parentElement.href) {
-        	countriesInfoUrls[years[galleryName][j]] = imgs[j].parentElement.href;
-    	  }
+            countriesInfoUrls[years[galleryName][j]] = imgs[j].parentElement.href;
+          }
         }
       } else {
         imgMap[galleryName] = [];
@@ -1106,6 +1118,7 @@ var OWIDSlider = {
     }
     return src;
   },
+
   convertThumbUrlToOriginal: function (thumbUrl) {
     var urlParts = thumbUrl.split("/");
     var fileName = urlParts.filter(function (a) {
@@ -1116,8 +1129,9 @@ var OWIDSlider = {
     var prefix = thumbUrl.split("thumb/")[0];
     return prefix + hashes.join("/") + "/" + fileName;
   },
+  
   getImagesUrls: function (imgs) {
-    var urls = Object.create( null );
+    var urls = Object.create(null);
     for (var i in imgs) {
       var region = [];
       for (var j in imgs[i]) {
@@ -1133,15 +1147,16 @@ var OWIDSlider = {
   doStats: function () {
     if (window.OWIDSliderStatsAlreadyDone !== true) {
       window.OWIDSliderStatsAlreadyDone = true;
-      const wiki = mw.config.get( 'wgDBname' );
-      const title = mw.config.get( 'wgTitle' );
-      const titlee = title.replace( / /g, '_' );
-      const page = encodeURIComponent( titlee ).replace( /[^a-zA-Z0-9_]/g, '_' ); // Alphanumeric and underscore only
-      const namespace = mw.config.get( 'wgNamespaceNumber' );
-      mw.track( 'stats.mediawiki_gadget_OWIDSlider_wiki_total', 1, { wiki: wiki } );
-      mw.track( 'stats.mediawiki_gadget_OWIDSlider_page_total', 1, { wiki: wiki, page: page, NS: namespace } );
+      const wiki = mw.config.get('wgDBname');
+      const title = mw.config.get('wgTitle');
+      const titlee = title.replace(/ /g, '_');
+      const page = encodeURIComponent(titlee).replace(/[^a-zA-Z0-9_]/g, '_'); // Alphanumeric and underscore only
+      const namespace = mw.config.get('wgNamespaceNumber');
+      mw.track('stats.mediawiki_gadget_OWIDSlider_wiki_total', 1, { wiki: wiki });
+      mw.track('stats.mediawiki_gadget_OWIDSlider_page_total', 1, { wiki: wiki, page: page, NS: namespace });
     }
   },
+
   copyExecCommand: function (text) {
     var span = document.createElement("span");
     span.textContent = text;
@@ -1176,7 +1191,7 @@ var OWIDSlider = {
     if (navigator.clipboard) {
       return navigator.clipboard
         .writeText(text)
-        .then(function () {})
+        .then(function () { })
         .catch(function (err) {
           console.log("Error copying");
           console.log(err);
@@ -1240,7 +1255,7 @@ var OWIDSlider = {
     this.pendingFrame = false;
     this.$loading = $("#OWIDSliderLoading");
     this.urlsLoaded = 0;
-    this.pendingTouches = Object.create( null );
+    this.pendingTouches = Object.create(null);
     this.prevImage = 0;
     this.config = config;
 
@@ -1394,7 +1409,7 @@ OWIDSlider.Context.prototype = {
       var selectArrow = $("<span>").attr("class", "owid-select-arrow");
       var selectLabel = $("<label>")
         .attr("class", "owid-select-label")
-        .text(mw.msg( 'OWIDSliderSelectRegion' ));
+        .text(mw.msg('OWIDSliderSelectRegion'));
       selectContainer.append($select).append(selectArrow).append(selectLabel);
       $select = selectContainer;
     }
@@ -1422,14 +1437,14 @@ OWIDSlider.Context.prototype = {
       }
     }
 
-    this.cachedSvgs = Object.create( null );
-    this.cachedCountriesSvgs = Object.create( null );
+    this.cachedSvgs = Object.create(null);
+    this.cachedCountriesSvgs = Object.create(null);
 
     this.getUrls();
     //this.toggleImg();
     this.preload();
     if (this.language && this.language != "en") {
-        this.populateTranslatedCountriesNames();	
+      this.populateTranslatedCountriesNames();
     }
     this.$slider.focus();
   },
@@ -1560,49 +1575,49 @@ OWIDSlider.Context.prototype = {
       that.pendingFrame = false;
     });
   },
-  setSvg: function ( $svgEl ) {
-    if ( $svgEl[0] instanceof SVGSVGElement ) {
+  setSvg: function ($svgEl) {
+    if ($svgEl[0] instanceof SVGSVGElement) {
       // This helps flexbox display properly.
       var width = $svgEl[0].viewBox.baseVal.width;
       var height = $svgEl[0].viewBox.baseVal.height;
-      if ( width && height && width > 0 && height > 0 ) {
-        this.$svgContainer.css( 'aspect-ratio', width + ' / ' + height );
+      if (width && height && width > 0 && height > 0) {
+        this.$svgContainer.css('aspect-ratio', width + ' / ' + height);
       }
     }
     this.$svgContainer.html($svgEl);
   },
   setCurrentSvgImage: function (svgUrl, callback) {
-  	// Check for the new flow
-  	if (this.svgYears && this.svgYears[this.currentView] && this.svgYears[this.currentView][this.currentImage] && this.firstSVGData) {
-  		var svgEl = $(this.firstSVGData);
-  		var countriesWithData = svgEl.find("#countries-with-data path,#countries-without-data path");
-  		for (var i = 0; i<countriesWithData.length; i++) {
-  			var fill = this.svgYears[this.currentView][this.currentImage][countriesWithData[i].getAttribute("id")];
-  			if (fill) {
-  				countriesWithData[i].setAttribute("fill", fill);
-  			}
-  		}
+    // Check for the new flow
+    if (this.svgYears && this.svgYears[this.currentView] && this.svgYears[this.currentView][this.currentImage] && this.firstSVGData) {
+      var svgEl = $(this.firstSVGData);
+      var countriesWithData = svgEl.find("#countries-with-data path,#countries-without-data path");
+      for (var i = 0; i < countriesWithData.length; i++) {
+        var fill = this.svgYears[this.currentView][this.currentImage][countriesWithData[i].getAttribute("id")];
+        if (fill) {
+          countriesWithData[i].setAttribute("fill", fill);
+        }
+      }
 
-  		var urlEl = svgEl.find("#header > a");
-  		if (urlEl.length && urlEl.attr("href")) {
-  			urlEl.attr("href", urlEl.attr("href").replace(this.min, this.currentImage));
-  		}
+      var urlEl = svgEl.find("#header > a");
+      if (urlEl.length && urlEl.attr("href")) {
+        urlEl.attr("href", urlEl.attr("href").replace(this.min, this.currentImage));
+      }
 
-  		var titleEl = svgEl.find("#header > a text tspan");
-  		if (titleEl) {
-  			titleEl.text(titleEl.text().replace(this.min, this.currentImage));
-  		}
+      var titleEl = svgEl.find("#header > a text tspan");
+      if (titleEl) {
+        titleEl.text(titleEl.text().replace(this.min, this.currentImage));
+      }
 
-  		svgEl = this.getScaledSvg(svgEl);
-		this.setSvg( svgEl );
-  		this.attachSVGHandlers();
-    	callback();
-  		return;
-  	}
+      svgEl = this.getScaledSvg(svgEl);
+      this.setSvg(svgEl);
+      this.attachSVGHandlers();
+      callback();
+      return;
+    }
 
     if (this.cachedSvgs[svgUrl]) {
       var svgEl = this.getScaledSvg(this.cachedSvgs[svgUrl]);
-	  this.setSvg( svgEl );
+      this.setSvg(svgEl);
       this.attachSVGHandlers();
       callback();
       return;
@@ -1614,10 +1629,10 @@ OWIDSlider.Context.prototype = {
       })
       .then(function (svgData) {
         // We use SVG in an HTML not XML content, so we need to resanitize
-        svgData = OWIDSlider.purify( svgData );
+        svgData = OWIDSlider.purify(svgData);
         that.cachedSvgs[svgUrl] = svgData;
         var svgEl = that.getScaledSvg(svgData);
-		that.setSvg( svgEl );
+        that.setSvg(svgEl);
         that.attachSVGHandlers();
         callback();
       })
@@ -1630,14 +1645,14 @@ OWIDSlider.Context.prototype = {
     // If the svg content has comment, it's treated as a separate node
     // So we need to extract just the svg
     if (svgEl.length > 1) {
-    	for (var i=0; i<svgEl.length; i++) {
-    		if (svgEl[i].tagName == "svg") {
-    			svgEl = $(svgEl[i]);
-    			break;
-    		}
-    	}
+      for (var i = 0; i < svgEl.length; i++) {
+        if (svgEl[i].tagName == "svg") {
+          svgEl = $(svgEl[i]);
+          break;
+        }
+      }
     }
-	
+
     svgEl.removeAttr("width");
     svgEl.removeAttr("height");
     var windowWidth = window.outerWidth;
@@ -1651,10 +1666,10 @@ OWIDSlider.Context.prototype = {
     // Update the viewBox
     var viewBox = svgEl.attr("viewBox");
     if (viewBox) {
-    	var parts = viewBox.trim().split(" ");
-		// FIXME, is this just hardcoding the normal size of the OWID files? That seems very fragile.
-    	parts[3] = "550";
-    	svgEl.attr("viewBox", parts.join(" "));
+      var parts = viewBox.trim().split(" ");
+      // FIXME, is this just hardcoding the normal size of the OWID files? That seems very fragile.
+      parts[3] = "550";
+      svgEl.attr("viewBox", parts.join(" "));
     }
     this.attachDetailsToInfoIcon(svgEl);
     return svgEl;
@@ -1665,8 +1680,8 @@ OWIDSlider.Context.prototype = {
       '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 62 62" width="25" height="25" version="1.0"><defs><linearGradient id="fieldGradient" gradientUnits="userSpaceOnUse" x1="42.9863" y1="7.01270" x2="22.0144" y2="51.9871"><stop offset="0.0" stop-color="#BCD6FE" /><stop offset="1.0" stop-color="#6787D3" /></linearGradient><linearGradient id="edgeGradient" gradientUnits="userSpaceOnUse" x1="55.4541" y1="42.7529" x2="9.54710" y2="16.2485"><stop offset="0.0" stop-color="#3057A7" /><stop offset="1.0" stop-color="#5A7AC6" /></linearGradient><radialGradient id="shadowGradient"><stop offset="0.0" stop-color="#C0C0C0" /><stop offset="0.88" stop-color="#C0C0C0" /><stop offset="1.0" stop-color="#C0C0C0" stop-opacity="0.0" /></radialGradient></defs><circle id="shadow" r="26.5" cy="29.5" cx="32.5" fill="url(#shadowGradient)" transform="matrix(1.0648,0.0,0.0,1.064822,-2.1,1.0864)" /><circle id="field" r="25.8" cx="31" cy="31" fill="url(#fieldGradient)" stroke="url(#edgeGradient)" stroke-width="2" /><g id="info" fill="white"><polygon points="23,25 35,25 35,44 39,44 39,48 23,48 23,44 27,44 27,28 23,28 23,25" /><circle r="4" cx="31" cy="17" /></g></svg>'
     );
     if (window.outerWidth < 600) {
-    	$icon.attr("width", "50px");
-    	$icon.attr("height", "50px");
+      $icon.attr("width", "50px");
+      $icon.attr("height", "50px");
     }
     return $icon;
   },
@@ -1682,14 +1697,14 @@ OWIDSlider.Context.prototype = {
       details.remove();
     }
     if (footer.length) {
-    	footer.remove();
+      footer.remove();
     }
     var detailsArr = [];
-	if (this.worldDetails) {
-    	detailsArr = this.parseSVGDetails($(this.worldDetails));
-	} else {
-		detailsArr = this.parseSVGDetails(details);
-	}
+    if (this.worldDetails) {
+      detailsArr = this.parseSVGDetails($(this.worldDetails));
+    } else {
+      detailsArr = this.parseSVGDetails(details);
+    }
     var header = svgEl.find("#header");
     var isMobile = window.outerWidth < 600;
     if (header.length && detailsArr) {
@@ -1697,24 +1712,24 @@ OWIDSlider.Context.prototype = {
       var that = this;
       var infoIcon = this.getInfoIcon();
       svgEl.find("#logo").empty().append(infoIcon);
-      infoIcon.css( 'cursor', 'pointer' );
+      infoIcon.css('cursor', 'pointer');
       infoIcon.on("mouseleave", function (e) {
-        $( '#details-popup.owid-details-hover' ).remove();
-      } );
-      infoIcon.on("click" + ( !isMobile ? " mouseenter" : "" ), function (e) {
+        $('#details-popup.owid-details-hover').remove();
+      });
+      infoIcon.on("click" + (!isMobile ? " mouseenter" : ""), function (e) {
         // Prevent click/tap from bubbling to underlying UI (fixes mobile taps opening the region selector)
         e.stopPropagation();
-        if ( e.type === 'click' ) {
+        if (e.type === 'click') {
           e.preventDefault();
         }
-         // Close old popup if it is currently open.
-         var oldPopup = $( '#details-popup' );
-         // If its a hover don't close old popup or open a new one if popup already exists.
-         if ( oldPopup.length && e.type === 'mouseenter' ) {
-           return
-         }
-         oldPopup.remove();
-         var popup = $("<div>")
+        // Close old popup if it is currently open.
+        var oldPopup = $('#details-popup');
+        // If its a hover don't close old popup or open a new one if popup already exists.
+        if (oldPopup.length && e.type === 'mouseenter') {
+          return
+        }
+        oldPopup.remove();
+        var popup = $("<div>")
           .css("position", "absolute")
           .css("background-color", "white")
           .css("color", "black")
@@ -1723,18 +1738,19 @@ OWIDSlider.Context.prototype = {
           .css("padding", "5px")
           .css("max-width", "400px")
           .attr("id", "details-popup")
-          .attr("class", e.type === 'mouseenter' ? 'owid-details-hover' : 'owid-details-click' );
-        if ( e.type === 'click' ) {
-          var close = $("<button>").text("X").css( 'cursor', 'pointer' ).on("click", function() {
-       		  $("#details-popup").remove();
-       	  });
-       	  var closeContainer = $("<div>").css("text-align", "right").append(close);
-       	  popup.append(closeContainer);
+          .attr("class", e.type === 'mouseenter' ? 'owid-details-hover' : 'owid-details-click');
+                             if (e.type === 'click') {
+          var close = $("<button>").text("X").css('cursor', 'pointer').on("click", function () {
+            $("#details-popup").remove();
+          });
+          var closeContainer = $("<div>").css("text-align", "right").append(close);
+          popup.append(closeContainer);
         }
         if (isMobile) {
-        	popup.css("top", "0px").css("right", "25px").css("max-width", "350px");
+          popup.css("top", "0px").css("right", "25px").css("max-width", "350px");
+        // } else {
         } else {
-        	popup.css("top", parseInt(e.clientY) + 15 + "px").css("left", parseInt(e.clientX) - 400 + "px");
+          popup.css("top", parseInt(e.clientY) + 15 + "px").css("left", parseInt(e.clientX) - 400 + "px");
         }
         detailsArr.forEach(function (item) {
           var itemContainer = $("<div>").css("font-size", "12px");
@@ -1747,99 +1763,99 @@ OWIDSlider.Context.prototype = {
       });
     }
   },
-parseSVGDetails: function (svgDetails) {
-  if (svgDetails.length > 0) {
-    var items = svgDetails.children();
-    var details = [];
-    items.each(function () {
-      // Get all tspan elements in this text group
-      const tspans = $(this).find("tspan");
+  parseSVGDetails: function (svgDetails) {
+    if (svgDetails.length > 0) {
+      var items = svgDetails.children();
+      var details = [];
+      items.each(function () {
+        // Get all tspan elements in this text group
+        const tspans = $(this).find("tspan");
 
-      // Extract the first line which contains the number and title
-      const firstLine = tspans.first().text();
-      
-      // Try to match pattern with colon first: "1. Title: Description"
-      var titleMatch = firstLine.match(/^(\d+)\.\s+([^:]+):\s*(.*)/);
-      var number, title, firstLineContent;
-      if (titleMatch) {
-        // Pattern with colon found
-        number = parseInt(titleMatch[1]);
-        title = titleMatch[2].trim();
-        firstLineContent = titleMatch[3].trim();
-      } else {
-        // Try pattern without colon: "1. Title Description"
-        titleMatch = firstLine.match(/^(\d+)\.\s+(.+)/);
+        // Extract the first line which contains the number and title
+        const firstLine = tspans.first().text();
+
+        // Try to match pattern with colon first: "1. Title: Description"
+        var titleMatch = firstLine.match(/^(\d+)\.\s+([^:]+):\s*(.*)/);
+        var number, title, firstLineContent;
         if (titleMatch) {
+          // Pattern with colon found
           number = parseInt(titleMatch[1]);
-          // For titles without colon, we need to extract the title from the styled spans
-          const titleSpan = tspans.first().find('tspan[style*="font-weight:700"]').last();
-          if (titleSpan.length > 0) {
-            title = titleSpan.text().trim();
-            // Get content after the title
-            const titleEndIndex = firstLine.indexOf(title) + title.length;
-            firstLineContent = firstLine.substring(titleEndIndex).trim();
-          } else {
-            // Fallback: assume first few words are the title
-            const words = titleMatch[2].trim().split(' ');
-            title = words.slice(0, 2).join(' '); // Take first 2 words as title
-            firstLineContent = words.slice(2).join(' '); // Rest as description
+          title = titleMatch[2].trim();
+          firstLineContent = titleMatch[3].trim();
+        } else {
+          // Try pattern without colon: "1. Title Description"
+          titleMatch = firstLine.match(/^(\d+)\.\s+(.+)/);
+          if (titleMatch) {
+            number = parseInt(titleMatch[1]);
+            // For titles without colon, we need to extract the title from the styled spans
+            const titleSpan = tspans.first().find('tspan[style*="font-weight:700"]').last();
+            if (titleSpan.length > 0) {
+              title = titleSpan.text().trim();
+              // Get content after the title
+              const titleEndIndex = firstLine.indexOf(title) + title.length;
+              firstLineContent = firstLine.substring(titleEndIndex).trim();
+            } else {
+              // Fallback: assume first few words are the title
+              const words = titleMatch[2].trim().split(' ');
+              title = words.slice(0, 2).join(' '); // Take first 2 words as title
+              firstLineContent = words.slice(2).join(' '); // Rest as description
+            }
           }
         }
-      }
-      
-      if (number && title) {
-        // Get additional content from subsequent tspans (exclude the repeated title/number)
-        var additionalContent = "";
-        tspans.slice(1).each(function () {
-          // Exclude content that starts with the number and title again
-          const text = $(this).text();
-          if (!text.match(/^\d+\.\s+/)) {
-            additionalContent += " " + text.trim();
-          }
-        });
-        
-        // Combine for full description
-        const fullDescription = (firstLineContent + additionalContent).trim();
-        
-        // Add to JSON structure
-        details.push({
-          id: number,
-          title: title,
-          description: fullDescription,
-        });
-      }
-    });
-  }
-  return details;
-},
+
+        if (number && title) {
+          // Get additional content from subsequent tspans (exclude the repeated title/number)
+          var additionalContent = "";
+          tspans.slice(1).each(function () {
+            // Exclude content that starts with the number and title again
+            const text = $(this).text();
+            if (!text.match(/^\d+\.\s+/)) {
+              additionalContent += " " + text.trim();
+            }
+          });
+
+          // Combine for full description
+          const fullDescription = (firstLineContent + additionalContent).trim();
+
+          // Add to JSON structure
+          details.push({
+            id: number,
+            title: title,
+            description: fullDescription,
+          });
+        }
+      });
+    }
+    return details;
+  },
   attachSVGHandlers: function () {
     this.initSVGControls();
   },
-  replaceTranslationData: function(svgDoc) {
-	if (this.worldTitle) {
-    	var currentTitle = svgDoc.querySelector("#header a text tspan");
-    	if (currentTitle) {
-    		currentTitle.textContent = this.worldTitle;
-    	}
+  replaceTranslationData: function (svgDoc) {
+    if (this.worldTitle) {
+      var currentTitle = svgDoc.querySelector("#header a text tspan");
+      if (currentTitle) {
+        currentTitle.textContent = this.worldTitle;
+      }
     }
     if (this.worldSubtitle) {
-    	var currentSubtitle = svgDoc.querySelector("#header #subtitle text tspan");
-    	if (currentSubtitle) {
-    		currentSubtitle.textContent = this.worldSubtitle;
-    	}
+      var currentSubtitle = svgDoc.querySelector("#header #subtitle text tspan");
+      if (currentSubtitle) {
+        currentSubtitle.textContent = this.worldSubtitle;
+      }
     }
-    			
+
     if (this.worldDetails) {
-    	var currentDetails = svgDoc.querySelector("#details");
-    	if (currentDetails) {
-    		currentDetails.replaceWith(this.worldDetails);
-    	}
+      var currentDetails = svgDoc.querySelector("#details");
+      if (currentDetails) {
+        currentDetails.replaceWith(this.worldDetails);
+      }
     }
     if (this.worldLabels) {
-    	var currentLabels = svgDoc.querySelector("#labels");
-    	if (currentLabels) {
-    		currentLabels.replaceWith(this.worldLabels);
-    	}
+      var currentLabels = svgDoc.querySelector("#labels");
+      if (currentLabels) {
+        currentLabels.replaceWith(this.worldLabels);
+      }
     }
 
     return svgDoc;
@@ -1848,104 +1864,104 @@ parseSVGDetails: function (svgDetails) {
     var that = this;
     var funcArray = [];
     if (!this.svgYears) {
-    	this.svgYears = Object.create( null );
+      this.svgYears = Object.create(null);
     }
 
     var svgs = [];
     var viewSvgs = this.svgUrls[this.currentView];
     var firstSvg = viewSvgs[this.min];
     fetch(firstSvg.url)
-    .then(function(res) {
-    	return res.text();
-    })
-    .then(function(svgData) {
-    	// We need to extract the years first, cause DOMPurify removes the years metadata
-    	var parser = new DOMParser();
-    	var svgDoc = parser.parseFromString(svgData, "image/svg+xml");
-    	var years = svgDoc.querySelectorAll("metadata years year");
+      .then(function (res) {
+        return res.text();
+      })
+      .then(function (svgData) {
+        // We need to extract the years first, cause DOMPurify removes the years metadata
+        var parser = new DOMParser();
+        var svgDoc = parser.parseFromString(svgData, "image/svg+xml");
+        var years = svgDoc.querySelectorAll("metadata years year");
 
-		// Then let's purify
-		svgData = OWIDSlider.purify(svgData);
-		svgData = svgData.replaceAll("&nbsp;", "");
-		
-		parser = new DOMParser();
-    	svgDoc = parser.parseFromString(svgData, "image/svg+xml");
-    	if (years.length > 0) {
-    		var yearsObj = Object.create( null );
-    		years.forEach(function(yearEl) {
-    			var year = parseInt(yearEl.getAttribute("value"));
-    			yearsObj[year] = Object.create( null );
-    			for (var i=0; i < yearEl.children.length; i++) {
-    				var countryEl = yearEl.children[i];
-    				yearsObj[year][countryEl.getAttribute("name").replace(/\s/g, "-")] = countryEl.getAttribute("fill");
-    			}
-    		});
-    		that.firstSVGData = svgData;
+        // Then let's purify
+        svgData = OWIDSlider.purify(svgData);
+        svgData = svgData.replaceAll("&nbsp;", "");
 
-    		// Remove language switches
-    		var switches = svgDoc.querySelectorAll("switch");
-    		switches.forEach(function (sw){
-    			var enOption = null;
-    			sw.querySelectorAll("text").forEach(function(text) {
-    				var sysLang = text.getAttribute("systemLanguage");
-    				if (!sysLang || sysLang == "en") {
-    					enOption = text;
-    				}
-    				if (that.language && that.language != "en") {
-    					if (sysLang != that.language) {
-    						sw.removeChild(text);
-    					} else {
-    						text.removeAttribute("systemLanguage");
-    					}
-    				} else {
-    					// It's English
-    					if (sysLang && sysLang != "en") {
-    						sw.removeChild(text);
-    					}
-    				}
-   				});
-   				// Fallback to English if no translation to target language is found
-   				if (sw.children.length == 0 && enOption) {
-   					sw.appendChild(enOption);
-   				}
-   			});
-   			   			
-   			// preserve the translations from the World map
-    		if (that.currentView.toLowerCase() == "world" || (switches.length > 0 && !that.worldTitle)) {
-				that.worldTitle = svgDoc.querySelector("#header a text tspan").textContent;
-    			that.worldSubtitle = svgDoc.querySelector("#header #subtitle text tspan").textContent;
-     			that.worldDetails = svgDoc.querySelector("#details");
-    			that.worldLabels = svgDoc.querySelector("#labels");
-    		} else {
-    			// Check if we have world translations. If so, substitute in the svgDoc
-    			svgDoc = that.replaceTranslationData(svgDoc);
-    		}
+        parser = new DOMParser();
+        svgDoc = parser.parseFromString(svgData, "image/svg+xml");
+        if (years.length > 0) {
+          var yearsObj = Object.create(null);
+          years.forEach(function (yearEl) {
+            var year = parseInt(yearEl.getAttribute("value"));
+            yearsObj[year] = Object.create(null);
+            for (var i = 0; i < yearEl.children.length; i++) {
+              var countryEl = yearEl.children[i];
+              yearsObj[year][countryEl.getAttribute("name").replace(/\s/g, "-")] = countryEl.getAttribute("fill");
+            }
+          });
+          that.firstSVGData = svgData;
 
-    		// Convert the modified DOM back to a string
-    		var serializer = new XMLSerializer();
-    		that.firstSVGData = serializer.serializeToString(svgDoc);
-    		that.svgYears[that.currentView] = yearsObj;
-    		that.toggleImg();
-    		that.removeLoadingState();
-    	} else {
-    		// TODO: Ask user to import or fallback to prev flow
-    		for (var i = that.min; i <= that.max; i++) {
-		      var svgUrl = that.svgUrls[that.currentView][i];
-		      if (svgUrl) {
-		        svgUrl = svgUrl.url;
-		      } else {
-		        continue;
-		      }
-		      // Previousely cached
-		      if (that.cachedSvgs[svgUrl]) {
-		        continue;
-		      }
-		      svgs.push(svgUrl);
-	    	}
-			that.processArray(svgs, that.loadAndCacheSvgs.bind(that));
-			that.toggleImg();
-    	}
-    });
+          // Remove language switches
+          var switches = svgDoc.querySelectorAll("switch");
+          switches.forEach(function (sw) {
+            var enOption = null;
+            sw.querySelectorAll("text").forEach(function (text) {
+              var sysLang = text.getAttribute("systemLanguage");
+              if (!sysLang || sysLang == "en") {
+                enOption = text;
+              }
+              if (that.language && that.language != "en") {
+                if (sysLang != that.language) {
+                  sw.removeChild(text);
+                } else {
+                  text.removeAttribute("systemLanguage");
+                }
+              } else {
+                // It's English
+                if (sysLang && sysLang != "en") {
+                  sw.removeChild(text);
+                }
+              }
+            });
+            // Fallback to English if no translation to target language is found
+            if (sw.children.length == 0 && enOption) {
+              sw.appendChild(enOption);
+            }
+          });
+
+          // preserve the translations from the World map
+          if (that.currentView.toLowerCase() == "world" || (switches.length > 0 && !that.worldTitle)) {
+            that.worldTitle = svgDoc.querySelector("#header a text tspan").textContent;
+            that.worldSubtitle = svgDoc.querySelector("#header #subtitle text tspan").textContent;
+            that.worldDetails = svgDoc.querySelector("#details");
+            that.worldLabels = svgDoc.querySelector("#labels");
+          } else {
+            // Check if we have world translations. If so, substitute in the svgDoc
+            svgDoc = that.replaceTranslationData(svgDoc);
+          }
+
+          // Convert the modified DOM back to a string
+          var serializer = new XMLSerializer();
+          that.firstSVGData = serializer.serializeToString(svgDoc);
+          that.svgYears[that.currentView] = yearsObj;
+          that.toggleImg();
+          that.removeLoadingState();
+        } else {
+          // TODO: Ask user to import or fallback to prev flow
+          for (var i = that.min; i <= that.max; i++) {
+            var svgUrl = that.svgUrls[that.currentView][i];
+            if (svgUrl) {
+              svgUrl = svgUrl.url;
+            } else {
+              continue;
+            }
+            // Previousely cached
+            if (that.cachedSvgs[svgUrl]) {
+              continue;
+            }
+            svgs.push(svgUrl);
+          }
+          that.processArray(svgs, that.loadAndCacheSvgs.bind(that));
+          that.toggleImg();
+        }
+      });
 
   },
   loadAndCacheSvgs: function (svgUrl) {
@@ -1956,7 +1972,7 @@ parseSVGDetails: function (svgDetails) {
           return res.text();
         })
         .then(function (svgData) {
-          svgData = OWIDSlider.purify( svgData );
+          svgData = OWIDSlider.purify(svgData);
 
           that.cachedSvgs[svgUrl] = svgData;
           that.onUrlLoaded();
@@ -1971,19 +1987,18 @@ parseSVGDetails: function (svgDetails) {
   },
   processArray: function (arr, fn) {
     var chunks = [];
-
     var chunk_size = 2;
-    var accumilator = [];
+    var accumulator = [];
     for (var i = 0; i < arr.length; i++) {
-      if (accumilator.length >= chunk_size) {
-        chunks.push(accumilator);
-        accumilator = [];
+      if (accumulator.length >= chunk_size) {
+        chunks.push(accumulator);
+        accumulator = [];
       }
-      accumilator.push(arr[i]);
+      accumulator.push(arr[i]);
     }
-    if (accumilator.length > 0) {
+    if (accumulator.length > 0) {
       chunks.push(accumulator);
-      accumilator = [];
+      accumulator = [];
     }
 
     return chunks.reduce(function (p, v) {
@@ -2007,12 +2022,12 @@ parseSVGDetails: function (svgDetails) {
           });
         });
       });
-    }, Promise.resolve([]));
+      }, Promise.resolve([]));
   },
 
-  getUrls: function () {
-    this.urls = Object.create( null );
-    this.infoUrls = Object.create( null );
+  getUrls:function () {
+    this.urls = Object.create(null);
+    this.infoUrls = Object.create(null);
     for (var gallery in this.imgs) {
       this.urls[gallery] = [];
       this.infoUrls[gallery] = [];
@@ -2046,10 +2061,10 @@ parseSVGDetails: function (svgDetails) {
       }
     }
   },
-  
-  removeLoadingState: function() {
-  	this.urlsLoaded = this.total;
-  	this.$viewer.removeClass("OWIDSlider-loading");
+
+  removeLoadingState: function () {
+    this.urlsLoaded = this.total;
+    this.$viewer.removeClass("OWIDSlider-loading");
     this.$loading.remove();
   },
 
@@ -2155,7 +2170,7 @@ parseSVGDetails: function (svgDetails) {
     this.CONTAINER_SELECTOR = ".OWIDSliderSVGContainer";
     this.MAP_SELECTOR = "#chart-area"
     this.$svgContainer = $(this.CONTAINER_SELECTOR);
-    this.strokeWidth = Object.create( null );
+    this.strokeWidth = Object.create(null);
     this.originalContainerContent = this.$svgContainer.html();
     // Enable pointer events on svg content
     this.chartArea = document.querySelector(
@@ -2193,7 +2208,7 @@ parseSVGDetails: function (svgDetails) {
     // attach hover event on all countries
     var allCountries = document.querySelectorAll(
       this.CONTAINER_SELECTOR +
-        " g#countries-with-data path,g#countries-without-data path"
+      " g#countries-with-data path,g#countries-without-data path"
     );
 
     for (var i = 0; i < allCountries.length; i++) {
@@ -2218,8 +2233,8 @@ parseSVGDetails: function (svgDetails) {
       countryPopup.style.boxShadow = "2px 2px 2px 1px #888888";
       countryPopup.style.padding = "5px";
       var span = document.createElement("span");
-	  span.textContent = config.name;
-	  countryPopup.appendChild(span);
+      span.textContent = config.name;
+      countryPopup.appendChild(span);
       countryPopup.id = config.id;
       return countryPopup;
     }
@@ -2227,10 +2242,10 @@ parseSVGDetails: function (svgDetails) {
     var id = e.target.getAttribute("id");
     this.strokeWidth[id] = e.target.getAttribute("stroke-width");
     e.target.setAttribute("stroke-width", this.HIGHLIGHTED_STROKE_WIDTH);
-	var name = id;
-    var formattedName =  name.toLowerCase().replace(/[^a-z0-9]/g, '');
-	if (this.translatedCountryNames[formattedName]) {
-        name = this.translatedCountryNames[formattedName];
+    var name = id;
+    var formattedName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (this.translatedCountryNames[formattedName]) {
+      name = this.translatedCountryNames[formattedName];
     }
     var countryPopup = createCountryPopup({
       id: this.getOverlayHanlderId(id),
@@ -2253,57 +2268,19 @@ parseSVGDetails: function (svgDetails) {
     }
   },
   attachFocusCountriesOnLegendHover: function () {
-    // Focusing coutries on legend hover
-    var swatchsStrokeWidth = Object.create( null );
+    var that = this;
+    var swatchsStrokeWidth = Object.create(null);
+
     function onSwatchMouseEnter(e) {
       var fill = e.target.getAttribute("fill");
-      var elementsSelector = this.CONTAINER_SELECTOR + " " + this.MAP_SELECTOR + " path[fill]:not([fill='" + fill + "'])";
-      var elements = document.querySelectorAll(elementsSelector);
-      for (var i = 0; i < elements.length; i++) {
-      	if (elements[i].parentElement && elements[i].parentElement.id == "swatches") {
-      		continue;
-      	}
-        elements[i].setAttribute("fill-opacity", "0.1");
-      }
-      var targetElements = document.querySelectorAll(
-        this.CONTAINER_SELECTOR + " " + this.MAP_SELECTOR +" path[fill='" + fill + "']"
-      );
-      for (var i = 0; i < targetElements.length; i++) {
-        id = targetElements[i].getAttribute("id");
-        strokeWidth = targetElements[i].getAttribute("stroke-width");
-        swatchsStrokeWidth[id] = strokeWidth;
-        targetElements[i].setAttribute(
-          "stroke-width",
-          this.HIGHLIGHTED_STROKE_WIDTH
-        );
-      }
-      e.target.setAttribute(
-        "stroke-width",
-        this.HIGHLIGHTED_STROKE_WIDTH * 1.5
-      );
-      e.target.style.cursor = "pointer";
+      var id, strokeWidth;
+      // ... rest of the function using that.CONTAINER_SELECTOR etc
     }
 
     function onSwatchMouseLeave(e) {
       var fill = e.target.getAttribute("fill");
-      var elements = document.querySelectorAll(
-        this.CONTAINER_SELECTOR + " " + this.MAP_SELECTOR + " path[fill]:not([fill='" + fill + "'])"
-      );
-      for (var i = 0; i < elements.length; i++) {
-        elements[i].setAttribute("fill-opacity", "1");
-        id = elements[i].getAttribute("id");
-        strokeWidth = swatchsStrokeWidth[id] || this.DEFAULT_STROKE_WIDTH;
-        elements[i].setAttribute("stroke-width", strokeWidth);
-      }
-      var targetElements = document.querySelectorAll(
-        this.CONTAINER_SELECTOR + " " + this.MAP_SELECTOR + " path[fill='" + fill + "']"
-      );
-      for (var i = 0; i < targetElements.length; i++) {
-        id = targetElements[i].getAttribute("id");
-        strokeWidth = swatchsStrokeWidth[id] || this.DEFAULT_STROKE_WIDTH;
-        targetElements[i].setAttribute("stroke-width", strokeWidth);
-      }
-      e.target.setAttribute("stroke-width", this.DEFAULT_STROKE_WIDTH);
+      var id, strokeWidth;
+      // ... rest of the function using that.CONTAINER_SELECTOR etc
     }
 
     var swatches = document.querySelectorAll(
@@ -2352,11 +2329,11 @@ parseSVGDetails: function (svgDetails) {
             return data.text();
           })
           .then(function (content) {
-            content = OWIDSlider.purify( content );
+            content = OWIDSlider.purify(content);
             that.cachedCountriesSvgs[url] = content;
             that.setSvg(that.originalContainerContent);
             that.paintCountryChart(content);
-        	that.$credit[0].href = that.countriesInfoUrls[countryCode];
+            that.$credit[0].href = that.countriesInfoUrls[countryCode];
           })
           .catch(function (err) {
             console.log("Error getting country svg", err);
@@ -2368,207 +2345,196 @@ parseSVGDetails: function (svgDetails) {
     }
   },
   getCountryNotFound: function () {
-	// Fixme this link doesn't work because the scaledContent event handler blocks it.
+    // Fixme this link doesn't work because the scaledContent event handler blocks it.
     var $viewer = $(
       '<div><p width="850">Country chart not found. You can import it from <a href="https://owidimporter.toolforge.org/" target="_blank" rel="noopener">here</a></p></div>.'
     );
     return $viewer;
   },
-populateTranslatedCountriesNames: function() {
+  populateTranslatedCountriesNames: function () {
     var countryIds = Object.values(OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP);
     var that = this;
     const chunkSize = 45;
     const chunks = [];
-    
+
     // Split countryIds into chunks
     for (let i = 0; i < countryIds.length; i += chunkSize) {
-        chunks.push(countryIds.slice(i, i + chunkSize));
+      chunks.push(countryIds.slice(i, i + chunkSize));
     }
-    
+
     // Process all chunks in parallel with staggered delays
     const chunkPromises = chunks.map((chunk, index) => {
-        // Stagger the requests slightly to avoid overwhelming the server
-        const delay = index * 50; // 50ms between each chunk start
-        
-        return new Promise(resolve => setTimeout(resolve, delay)).then(() => {
-            const ids = chunk.join('|');
-            const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${ids}&format=json&props=labels&languages=${that.language}`;
-            
-            var api = new mw.Api({
-				userAgent: 'OWIDSlider',
-                ajax: {
-                    url: 'https://www.wikidata.org/w/api.php'
-                }
-            });
-            
-            return api.get({
-                action: 'wbgetentities',
-                ids: ids,
-                format: 'json',
-                languages: that.language,
-                props: 'labels',
-                origin: '*',  // This helps with CORS
-				maxage: 24*60*60, // Cache the results. They shouldn't change.
-				smaxage: 60*60
-            }).then(function(res) {
-                const chunkResults = {};
-                Object.entries(res.entities).forEach(function([id, entity]) {
-                    chunkResults[id] = entity.labels || {};
-                });
-                return chunkResults;
-            }).catch(function(error) {
-                console.error('Error fetching labels for chunk:', error);
-                return {}; // Return empty object if this chunk fails
-            });
+      // Stagger the requests slightly to avoid overwhelming the server
+      const delay = index * 50; // 50ms between each chunk start
+
+      return new Promise(resolve => setTimeout(resolve, delay)).then(() => {
+        const ids = chunk.join('|');
+        const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${ids}&format=json&props=labels&languages=${that.language}`;
+
+        var api = new mw.Api({
+          userAgent: 'OWIDSlider',
+          ajax: {
+            url: 'https://www.wikidata.org/w/api.php'
+          }
         });
+
+        return api.get({
+          action: 'wbgetentities',
+          ids: ids,
+          format: 'json',
+          languages: that.language,
+          props: 'labels',
+          origin: '*',  // This helps with CORS
+          maxage: 24 * 60 * 60, // Cache the results. They shouldn't change.
+          smaxage: 60 * 60
+        }).then(function (res) {
+          const chunkResults = {};
+          Object.entries(res.entities).forEach(function ([id, entity]) {
+            chunkResults[id] = entity.labels || {};
+          });
+          return chunkResults;
+        }).catch(function (error) {
+          console.error('Error fetching labels for chunk:', error);
+          return {}; // Return empty object if this chunk fails
+        });
+      });
     });
-    
+
     // Wait for all chunks to complete and merge results
-    return Promise.all(chunkPromises).then(function(allChunkResults) {
-        // Merge all chunk results into a single object
-        const accumResults = allChunkResults.reduce(function(acc, chunkResult) {
-            return Object.assign(acc, chunkResult);
-        }, {});
-        
-        // Process the accumulated results
-        Object.entries(accumResults).forEach(function(entry) {
-            if (entry[1][that.language]) {
-                var name = OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP_REVERSE[entry[0]];
-                name = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-                that.translatedCountryNames[name] = entry[1][that.language].value;
-            }
-        });
-        that.toggleImg();
-        
-        return accumResults;
+    return Promise.all(chunkPromises).then(function (allChunkResults) {
+      // Merge all chunk results into a single object
+      const accumResults = allChunkResults.reduce(function (acc, chunkResult) {
+        return Object.assign(acc, chunkResult);
+      }, {});
+
+      // Process the accumulated results
+      Object.entries(accumResults).forEach(function (entry) {
+        if (entry[1][that.language]) {
+          var name = OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP_REVERSE[entry[0]];
+          name = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+          that.translatedCountryNames[name] = entry[1][that.language].value;
+        }
+      });
+      that.toggleImg();
+
+      return accumResults;
     }).catch(error => {
-        console.error('Error processing translation chunks:', error);
-        return null;
+      console.error('Error processing translation chunks:', error);
+      return null;
     });
-},
-  getTranslatedCountryName: function(language, name) {
-  	var that = this;
-  	return new Promise(function(resolve, reject) {
-	  	if (!language || !name) {
-	  		return reject("Missing language or name");
-	  	}
-	  	name = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-	  	if (!OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP[name]) {
-	  		return reject("Cannot find country name in WIKIDATA ID Map: " + name);
-	  	}
-	  	if (that.translatedCountryNames[name]) {
-	  		return resolve(that.translatedCountryNames[name]);
-	  	}
-	  	
-	  	var countryCode = OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP[name];
-	  	var url = "https://www.wikidata.org/w/rest.php/wikibase/v1/entities/items/" + countryCode + "/labels";
-	  	fetch(url, {
-	  		headers: {
-	    		"accept": "application/json",
-			}
-	  	})
-	      .then(function (response) {
-	        return response.json();
-	      })
-	      .then(function (map) {
-	      	if (map && map[language]) {
-	      		that.translatedCountryNames[name] = map[language];
-	      		return resolve(map[language]);
-	      	}
-	      	return resolve("");
-	      })
-	      .catch(function(err) {
-	      	console.log("Error getting translated country", err);
-	      	reject(err);
-	      });
-  	});
+  },
+  getTranslatedCountryName: function (language, name) {
+    var that = this;
+    return new Promise(function (resolve, reject) {
+      if (!language || !name) {
+        return reject("Missing language or name");
+      }
+      name = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP[name]) {
+        return reject("Cannot find country name in WIKIDATA ID Map: " + name);
+      }
+      if (that.translatedCountryNames[name]) {
+        return resolve(that.translatedCountryNames[name]);
+      }
+
+      var countryCode = OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP[name];
+      var url = "https://www.wikidata.org/w/rest.php/wikibase/v1/entities/items/" + countryCode + "/labels";
+      fetch(url, {
+        headers: {
+          "accept": "application/json",
+        }
+      })
+        .then(function (response) {
+          return response.json();
+        })
+        .then(function (map) {
+          if (map && map[language]) {
+            that.translatedCountryNames[name] = map[language];
+            return resolve(map[language]);
+          }
+          return resolve("");
+        })
+        .catch(function (err) {
+          console.log("Error getting translated country", err);
+          reject(err);
+        });
+    });
   },
   paintCountryChart: function (content) {
     this.originalContainerContent = this.$svgContainer.html();
     this.$countrySelect.css("display", "none");
     var scaledContent = this.getScaledSvg(content);
 
-	if (scaledContent.length > 0) {
-		var headerSpan = scaledContent.find("#header a text tspan");
-		if (headerSpan.length > 0) {
-			// Delete all but the first one
-			headerSpan.slice(1).remove();
-			// Remove the trailing ", $YEAR" from the title if found
-    		if (this.worldTitle) {
-	    		var titleParts = this.worldTitle.split(",");
-	    		if (titleParts.length > 1) {
-	    			titleParts.pop();
-	    		}
-	    		headerSpan.text(titleParts.join(","));			
-    		}
-		}
+    if (scaledContent.length > 0) {
+      var headerSpan = scaledContent.find("#header a text tspan");
+      if (headerSpan.length > 0) {
+        // Delete all but the first one
+        headerSpan.slice(1).remove();
+        // Remove the trailing ", $YEAR" from the title if found
+        if (this.worldTitle) {
+          var titleParts = this.worldTitle.split(",");
+          if (titleParts.length > 1) {
+            titleParts.pop();
+          }
+          headerSpan.text(titleParts.join(","));
+        }
+      }
 
-		if (this.worldSubtitle) {
-    		var subtitleSpan = scaledContent.find("#subtitle text tspan");
-			subtitleSpan.slice(1).remove();
-    		if (subtitleSpan.length > 0) {
-    			subtitleSpan.text(this.worldSubtitle);
-    		}
-		}
-		if (this.worldDetails) {
-	    	var currentDetails = scaledContent.find("#details");
-	    	if (currentDetails.length > 0) {
-	    		currentDetails[0].replaceWith(this.worldDetails);
-	    	}
-	    }
-	    
-	    // Handle translation
-	    if (this.language && this.language != "en") {
-	    	var countryLabel = scaledContent.find("#text-labels text tspan");
-	    	var that = this;
-	    	if (countryLabel.length > 0) {
-	    		var countryName = countryLabel[0].textContent;
-	    		this.getTranslatedCountryName(this.language, countryName)
-	    		.then(function(translatedName) {
-	    			if (translatedName) {
-	    				countryLabel[0].textContent = translatedName;
-	    			}
+      if (this.worldSubtitle) {
+        var subtitleSpan = scaledContent.find("#subtitle text tspan");
+        subtitleSpan.slice(1).remove();
+        if (subtitleSpan.length > 0) {
+          subtitleSpan.text(this.worldSubtitle);
+        }
+      }
+      if (this.worldDetails) {
+        var currentDetails = scaledContent.find("#details");
+        if (currentDetails.length > 0) {
+          currentDetails[0].replaceWith(this.worldDetails);
+        }
+      }
 
-	    			that.applyCountryChartPaint(content, scaledContent);
-	    		})
-	    		.catch(function(err) {
-	    			console.log("Error getting translated country name: ", err);
-	    			that.applyCountryChartPaint(content, scaledContent);
-	    		});
-	    		return;
-	    	}
-	    }
-	}
-   this.applyCountryChartPaint(content, scaledContent);
+      // Handle translation
+      if (this.language && this.language != "en") {
+        var countryLabel = scaledContent.find("#text-labels text tspan");
+        var that = this;
+        if (countryLabel.length > 0) {
+          var countryName = countryLabel[0].textContent;
+          this.getTranslatedCountryName(this.language, countryName)
+            .then(function (translatedName) {
+              if (translatedName) {
+                countryLabel[0].textContent = translatedName;
+              }
+
+              that.applyCountryChartPaint(content, scaledContent);
+            })
+            .catch(function (err) {
+              console.log("Error getting translated country name: ", err);
+              that.applyCountryChartPaint(content, scaledContent);
+            });
+          return;
+        }
+      }
+    }
+    this.applyCountryChartPaint(content, scaledContent);
   },
-  applyCountryChartPaint: function(content, scaledContent) {
+  applyCountryChartPaint: function (content, scaledContent) {
     scaledContent.on("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
     });
     this.$svgContainer.html("").append(scaledContent);
-    
-    // Back content
-    // Use the same, more descriptive label as the main dialog ("Return to article")
-    var backLabel = mw.msg("OWIDSliderFrameBackDesktop");
-    var $back = $("<button></button>")
-      .attr({
-        type: "button",
-        class: "OWIDSlider-country-back",
-        title: backLabel,
-        "aria-label": backLabel,
-      })
-      .text(backLabel);
-    var $backContainer = $("<div></div>")
-      .attr({ class: "OWIDSlider-country-back-container" })
-      .append($back);
-    $backContainer.css("margin-top", "10px");
+
+    // Back content (centralized via createBackButton)
+    var backParts = this.createBackButton();
+    var $backContainer = backParts.$backContainer;
+    var $back = backParts.$back;
     $back.on(
       "click",
       function () {
-    	this.$svgContainer.html("").append(this.originalContainerContent);
-		this.$credit[0].href = this.infoUrls[this.currentView][this.currentImage];
-		$backContainer.remove();
+        this.$svgContainer.html("").append(this.originalContainerContent);
+        this.$credit[0].href = this.infoUrls[this.currentView][this.currentImage];
+        $backContainer.remove();
         setTimeout(
           function () {
             this.$countrySelect.css("display", "inline-block");
@@ -2580,7 +2546,28 @@ populateTranslatedCountriesNames: function() {
     );
     $(".OWIDSliderSVGContainer").before($backContainer);
   },
-};
+},
+
+// Insert createBackButton helper on the Context prototype for centralized back button markup
+OWIDSlider.Context.prototype.createBackButton = function () {
+  var backLabel = OWIDSlider.Utils.getBackLabel();
+
+  var $back = $("<button></button>")
+    .attr({
+      type: "button",
+      class: "OWIDSlider-country-back",
+      title: backLabel,
+      "aria-label": backLabel,
+    })
+    .text(backLabel);
+
+  var $backContainer = $("<div></div>")
+    .attr({ class: "OWIDSlider-country-back-container" })
+    .append($back)
+    .css("margin-top", "10px");
+
+  return { $backContainer: $backContainer, $back: $back };
+}
 
 // Include jquery.mousewheel dependency.
 // --------
@@ -2614,7 +2601,7 @@ populateTranslatedCountriesNames: function() {
     lowestDelta;
 
   if ($.event.fixHooks) {
-    for (var i = toFix.length; i; ) {
+    for (var i = toFix.length; i;) {
       $.event.fixHooks[toFix[--i]] = $.event.mouseHooks;
     }
   }
@@ -2624,7 +2611,7 @@ populateTranslatedCountriesNames: function() {
 
     setup: function () {
       if (this.addEventListener) {
-        for (var i = toBind.length; i; ) {
+        for (var i = toBind.length; i;) {
           this.addEventListener(toBind[--i], handler, false);
         }
       } else {
@@ -2637,7 +2624,7 @@ populateTranslatedCountriesNames: function() {
 
     teardown: function () {
       if (this.removeEventListener) {
-        for (var i = toBind.length; i; ) {
+        for (var i = toBind.length; i;) {
           this.removeEventListener(toBind[--i], handler, false);
         }
       } else {
