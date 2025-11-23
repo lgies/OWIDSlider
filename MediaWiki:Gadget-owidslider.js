@@ -2259,7 +2259,7 @@ parseSVGDetails: function (svgDetails) {
         elements[i].setAttribute("fill-opacity", "0.1");
       }
       var targetElements = document.querySelectorAll(
-        this.CONTAINER_SELECTOR + " " + this.MAP_SELECTOR +" path[fill='" + fill + "']"
+        this.CONTAINER_SELECTOR + " " + this.MAP_SELECTOR +" path[fill=\"" + escapedFill + "\"]"
       );
       for (var i = 0; i < targetElements.length; i++) {
         id = targetElements[i].getAttribute("id");
