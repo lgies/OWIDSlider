@@ -2238,12 +2238,19 @@ parseSVGDetails: function (svgDetails) {
       el.removeChild(overlayEl);
     }
   },
+  escapeCSSAttributeValue: function(value) {
+    // Escape special characters in CSS attribute selectors
+    // This handles cases where fill values might contain special characters
+    if (!value) return value;
+    return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  },
   attachFocusCountriesOnLegendHover: function () {
     // Focusing coutries on legend hover
     var swatchsStrokeWidth = Object.create( null );
     function onSwatchMouseEnter(e) {
       var fill = e.target.getAttribute("fill");
-      var elementsSelector = this.CONTAINER_SELECTOR + " " + this.MAP_SELECTOR + " path[fill]:not([fill='" + fill + "'])";
+      var escapedFill = this.escapeCSSAttributeValue(fill);
+      var elementsSelector = this.CONTAINER_SELECTOR + " " + this.MAP_SELECTOR + " path[fill]:not([fill=\"" + escapedFill + "\"])";
       var elements = document.querySelectorAll(elementsSelector);
       for (var i = 0; i < elements.length; i++) {
       	if (elements[i].parentElement && elements[i].parentElement.id == "swatches") {
@@ -2252,7 +2259,7 @@ parseSVGDetails: function (svgDetails) {
         elements[i].setAttribute("fill-opacity", "0.1");
       }
       var targetElements = document.querySelectorAll(
-        this.CONTAINER_SELECTOR + " " + this.MAP_SELECTOR +" path[fill='" + fill + "']"
+        this.CONTAINER_SELECTOR + " " + this.MAP_SELECTOR +" path[fill=\"" + escapedFill + "\"]"
       );
       for (var i = 0; i < targetElements.length; i++) {
         id = targetElements[i].getAttribute("id");
