@@ -2319,7 +2319,7 @@ OWIDSlider.Context.prototype = {
 		);
 		for ( var i = 0; i < swatches.length; i++ ) {
 			var fill = swatches[ i ].getAttribute( 'fill' );
-			if ( !fill || fill.indexOf( '#' ) !== 0 ) {
+			if ( !fill || ( fill.indexOf( '#' ) !== 0 && fill.indexOf( 'rgb' ) !== 0 ) ) {
 				continue;
 			}
 			swatches[ i ].onmouseenter = onSwatchMouseEnter.bind( this );
