@@ -1086,19 +1086,20 @@ var OWIDSlider = {
 			throw new Error( 'No images for slider' );
 		}
 		var urls = this.getImagesUrls( imgMap );
-		// var context = new OWIDSlider.Context(
-		// 	$viewer,
-		// 	data,
-		// 	imgMap,
-		// 	urls,
-		// 	countriesUrls,
-		// 	countriesInfoUrls,
-		// 	width,
-		// 	height,
-		// 	min,
-		// 	max,
-		// 	viewMin
-		// );
+		// eslint-disable-next-line no-new
+		new OWIDSlider.Context(
+			$viewer,
+			data,
+			imgMap,
+			urls,
+			countriesUrls,
+			countriesInfoUrls,
+			width,
+			height,
+			min,
+			max,
+			viewMin
+		);
 	},
 
 	getSource: function ( imgElm, width, height ) {
@@ -1369,10 +1370,10 @@ OWIDSlider.Context.prototype = {
 			that.scrollobject = true; // set flag
 			return false;
 		} );
-		// $svgContainer.on( 'mouseup', function ( event ) {
-		// 	that.scrollobject = false; // set flag
-		// 	return false;
-		// } ); /* eslint no-unused var*/
+		$svgContainer.on( 'mouseup', function ( event ) {
+			that.scrollobject = false; // set flag
+			return false;
+		} );
 		$svgContainer.on( 'mousemove', function ( event ) {
 			if ( that.scrollobject && Math.abs( mouse_y - event.screenY ) > 10 ) {
 				var offset = mouse_y < event.screenY ? 1 : -1;
