@@ -21,13 +21,15 @@
  */
 
 // Add ESLint globals comment at the top of the file
-// This tells ESLint these variables are intentionally global and expected to be available at runtime.
+// This tells ESLint these variables are intentionally global
+// and expected to be available at runtime.
 /* global mw, DOMPurify, $ */
 
 var OWIDSlider = {
 	// ---------------------------------------------------------------------
 	// OWIDSlider.I18n
-	// Purpose: centralize translations and message selection logic so it can be tested independently.
+	// Purpose: centralize translations and
+	// message selection logic so it can be tested independently.
 	// ---------------------------------------------------------------------
 	I18n: {
 		// Start translations. Add new languages under the appropriate language code.
@@ -215,7 +217,8 @@ var OWIDSlider = {
 		// End translations
 
 		// Set the interface messages in the most appropriate language
-		// Favor user language, then page content language, then site content language, then English.
+		// Favor user language, then page content language,
+		// then site content language, then English.
 		setMessages: function () {
 			var userLanguage = mw.config.get( 'wgUserLanguage' );
 			if ( userLanguage in OWIDSlider.I18n.messages ) {
@@ -249,7 +252,8 @@ var OWIDSlider = {
 			if ( OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP ) {
 				OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP_REVERSE = Object.create( null );
 				for ( let index in OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP ) {
-					OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP_REVERSE[ OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP[ index ] ] = index;
+					OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP_REVERSE[
+						OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP[ index ] ] = index;
 				}
 			}
 
@@ -263,7 +267,7 @@ var OWIDSlider = {
 		parseQueryParams: function () {
 			// Not allowed to use Object.fromEntries()
 			let res = Object.create( null );
-			for ( const [ key, value ] of new URLSearchParams( location.search ) ) {
+			for ( const [ key, value ] of new URLSearchParams( location.search ) ) { // ES2015 'for-of' statements are forbidden  es-x/no-for-of-loops
 				res[ key ] = value;
 			}
 			return res;
@@ -756,9 +760,9 @@ var OWIDSlider = {
 	// Moved to Core
 	// init: function () {
 	// OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP_REVERSE = Object.fromEntries(
-	// 	Object.entries(OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP).map(function([key, value]) {
-	//   		return [value, key];
-	// 	})
+	// Object.entries(OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP).map(function([key, value]) {
+	// return [value, key];
+	// })
 	// );
 	//   OWIDSlider.setMessages();
 	//   mw.hook("wikipage.content").add(OWIDSlider.addPlayButton);
@@ -790,9 +794,10 @@ var OWIDSlider = {
 
 	// Moved to I18n
 	/**
-	 * Set the interface messages in the most appropriate language
-	 *
-	 * Favor the user language first, the page language second, the wiki language third, and lastly English
+	 * Set the interface messages in
+	 * the most appropriate language
+	 * Favor the user language first, the page language second,
+	 * the wiki language third, and lastly English
 	 */
 
 	// Moved to I18n
@@ -823,7 +828,7 @@ var OWIDSlider = {
 	/**
 	 * Append a play button ► to every OWIDSlider div
 	 *
-	 * @param $content
+	 * @param {jQuery<object>} $content
 	 */
 	addPlayButton: function ( $content ) {
 		var queryParams = OWIDSlider.parseQueryParams();
@@ -840,7 +845,9 @@ var OWIDSlider = {
 					if (
 						viewerInfo[ i ] instanceof Object && typeof viewerInfo[ i ].list === 'string'
 					) {
-						// We used to use unicode ▶, but was rendered inconsitently between browsers, so switch to svg.
+						// We used to use unicode ▶,
+						// but was rendered inconsitently between browsers,
+						// so switch to svg.
 						var $play = $( '<button></button>' )
 							.attr( {
 								type: 'button',
@@ -921,14 +928,14 @@ var OWIDSlider = {
 			message: $viewer
 		};
 
-		var dialog = function ( config ) {
-			dialog.super.call( this, config );
+		var Dialog = function ( config ) {
+			Dialog.super.call( this, config );
 			this.$element.addClass( 'OWIDSliderDialog' );
 		};
 
-		OO.inheritClass( dialog, OO.ui.MessageDialog );
-		dialog.static.name = 'OWIDSlider';
-		OO.ui.getWindowManager().addWindows( [ new dialog() ] );
+		OO.inheritClass( Dialog, OO.ui.MessageDialog );
+		Dialog.static.name = 'OWIDSlider';
+		OO.ui.getWindowManager().addWindows( [ new Dialog() ] );
 		// copied from OO.ui.alert definition.
 
 		var win = OO.ui.getWindowManager().openWindow( 'OWIDSlider', config );
@@ -1021,10 +1028,10 @@ var OWIDSlider = {
 		var years = Object.create( null ),
 			imgMap = Object.create( null );
 		var min = 1e9,
-			max = -1e9,
-			width,
-			height,
-			viewMin;
+			max = -1e9;
+			// width,
+			// height,
+			// viewMin;
 		var countriesUrls = Object.create( null );
 		var countriesInfoUrls = Object.create( null );
 		this.translatedCountryNames = Object.create( null );
@@ -1057,8 +1064,8 @@ var OWIDSlider = {
 					countriesUrls[ years[ galleryName ][ j ] ] = this.convertThumbUrlToOriginal(
 						imgs[ j ].getAttribute( 'src' )
 					);
-					if ( imgs[ j ].parentElement.href ) {
-			countriesInfoUrls[ years[ galleryName ][ j ] ] = imgs[ j ].parentElement.href;
+					if ( imgs[ j ].parentNode.href ) {
+			countriesInfoUrls[ years[ galleryName ][ j ] ] = imgs[ j ].parentNode.href;
 	}
 				}
 			} else {
@@ -1072,9 +1079,10 @@ var OWIDSlider = {
 					imgMap[ galleryName ][ years[ galleryName ][ i ] ] = imgs[ i ];
 					if ( years[ galleryName ][ i ] < min ) {
 						min = years[ galleryName ][ i ];
-						width = imgMap[ galleryName ][ min ].width;
-						height = imgMap[ galleryName ][ min ].height;
-						viewMin = galleryName;
+						/* es-lint: no-unused-vars */
+						// width = imgMap[ galleryName ][ min ].width;
+						// height = imgMap[ galleryName ][ min ].height;
+						// viewMin = galleryName;
 					}
 					if ( years[ galleryName ][ i ] > max ) {
 						max = years[ galleryName ][ i ];
@@ -1085,19 +1093,20 @@ var OWIDSlider = {
 		if ( min === 1e9 ) {
 			throw new Error( 'No images for slider' );
 		}
-		var urls = this.getImagesUrls( imgMap );
+		/* es-lint: no-unused-vars */
+		// var urls = this.getImagesUrls( imgMap );
 		// var context = new OWIDSlider.Context(
-		// 	$viewer,
-		// 	data,
-		// 	imgMap,
-		// 	urls,
-		// 	countriesUrls,
-		// 	countriesInfoUrls,
-		// 	width,
-		// 	height,
-		// 	min,
-		// 	max,
-		// 	viewMin
+		// $viewer,
+		// data,
+		// imgMap,
+		// urls,
+		// countriesUrls,
+		// countriesInfoUrls,
+		// width,
+		// height,
+		// min,
+		// max,
+		// viewMin
 		// );
 	},
 
@@ -1293,10 +1302,12 @@ OWIDSlider.Context.prototype = {
 		const SCROLL_SLOWDOWN = navigator.userAgent.includes( 'Chrome/' ) ? 5 : 2;
 		this.pendingScrollDelta = 0;
 
-		// 	var containingWidth =
-		//   this.$viewer[ 0 ].parentElement.parentElement.parentElement.clientWidth; /* eslint no-unused var*/
-		// 	var containingHeight =
-		//   this.$viewer[ 0 ].parentElement.parentElement.parentElement.clientHeight; /* eslint no-unused var*/
+		// var containingWidth =
+		//   this.$viewer[ 0 ].parentNode.parentNode.parentNode.clientWidth;
+		// /* eslint no-unused var*/
+		// var containingHeight =
+		//   this.$viewer[ 0 ].parentNode.parentNode.parentNode.clientHeight;
+		// /* eslint no-unused var*/
 		this.$viewer.empty();
 
 		this.$slider = $( '<input>', {
@@ -1330,7 +1341,7 @@ OWIDSlider.Context.prototype = {
 		var handleTouchMove = this.handleTouchMove.bind( this );
 		var handleTouchCancel = this.handleTouchCancel.bind( this );
 		var handleTouchEnd = this.handleTouchEnd.bind( this );
-		var touchElement = this.$viewer[ 0 ].parentElement.parentElement;
+		var touchElement = this.$viewer[ 0 ].parentNode.parentNode;
 		var opt = { passive: true };
 
 		// For now it seems like we don't have to cancel events. Unclear if we should
@@ -1365,18 +1376,18 @@ OWIDSlider.Context.prototype = {
 		} );
 		$svgContainer.on( 'mousedown', function ( event ) {
 			// prepare scroll by drag
-			mouse_y = event.screenY; // remember mouse-position
+			mouseY = event.screenY; // remember mouse-position
 			that.scrollobject = true; // set flag
 			return false;
 		} );
 		// $svgContainer.on( 'mouseup', function ( event ) {
-		// 	that.scrollobject = false; // set flag
-		// 	return false;
+		// that.scrollobject = false; // set flag
+		// return false;
 		// } ); /* eslint no-unused var*/
 		$svgContainer.on( 'mousemove', function ( event ) {
-			if ( that.scrollobject && Math.abs( mouse_y - event.screenY ) > 10 ) {
-				var offset = mouse_y < event.screenY ? 1 : -1;
-				mouse_y = event.screenY; //  remember mouse-position for next event
+			if ( that.scrollobject && Math.abs( mouseY - event.screenY ) > 10 ) {
+				var offset = mouseY < event.screenY ? 1 : -1;
+				mouseY = event.screenY; //  remember mouse-position for next event
 				that.currentImage += offset;
 				that.repaint();
 			}
@@ -1545,7 +1556,8 @@ OWIDSlider.Context.prototype = {
 			var popupLeft =
         ( ( this.currentImage - this.min ) / ( this.max - this.min ) ) * 100;
 			var calculatedPopupLeft =
-        'calc(' + popupLeft + '% ' + '- ' + ( popupWidth / 2 + 10 ) + 'px)';
+        // 'calc(' + popupLeft + '% ' + '- ' + ( popupWidth / 2 + 10 ) + 'px)'; /* eslint no-useless-concat */
+		'calc(' + popupLeft + '% - ' + ( popupWidth / 2 + 10 ) + 'px)';
 			this.$sliderYearPopup
 				.css( 'visibility', 'visible' )
 				.css( 'left', calculatedPopupLeft );
@@ -1645,12 +1657,12 @@ OWIDSlider.Context.prototype = {
 
 		svgEl.removeAttr( 'width' );
 		svgEl.removeAttr( 'height' );
-		var windowWidth = window.outerWidth;
+		// var windowWidth = window.outerWidth; /* es-lint: no-unused-vars */
 		// var isMobile = windowWidth < 600; /* eslint no-unused var*/
 		// if (isMobile) {
-		// 	svgEl.attr("width", "100%");
+		// svgEl.attr("width", "100%");
 		// } else {
-		// 	svgEl.attr("height", "70vh");
+		// svgEl.attr("height", "70vh");
 		// }
 		svgEl.css( 'max-width', '100%' ).css( 'max-height', '70vh' );
 		// Update the viewBox
@@ -1870,7 +1882,7 @@ OWIDSlider.Context.prototype = {
 
 				// Then let's purify
 				svgData = OWIDSlider.purify( svgData );
-				svgData = svgData.replaceAll( '&nbsp;', '' );
+				svgData = svgData.replaceAll( '&nbsp;', '' ); // ES2021 'String.prototype.replaceAll' method is forbidden  es-x/no-string-prototype-replaceall
 
 				parser = new DOMParser();
 		svgDoc = parser.parseFromString( svgData, 'image/svg+xml' );
@@ -1976,10 +1988,10 @@ OWIDSlider.Context.prototype = {
 	processArray: function ( arr, fn ) {
 		var chunks = [];
 
-		var chunk_size = 2;
+		var chunkSize = 2;
 		var accumulator = [];
 		for ( var i = 0; i < arr.length; i++ ) {
-			if ( accumulator.length >= chunk_size ) {
+			if ( accumulator.length >= chunkSize ) {
 				chunks.push( accumulator );
 				accumulator = [];
 			}
@@ -2029,8 +2041,8 @@ OWIDSlider.Context.prototype = {
 					this.width,
 					this.height
 				);
-				if ( this.imgs[ gallery ][ i ].parentElement.href ) {
-					this.infoUrls[ gallery ][ i ] = this.imgs[ gallery ][ i ].parentElement.href;
+				if ( this.imgs[ gallery ][ i ].parentNode.href ) {
+					this.infoUrls[ gallery ][ i ] = this.imgs[ gallery ][ i ].parentNode.href;
 				} else {
 					this.infoUrls[ gallery ][ i ] = false;
 				}
@@ -2145,10 +2157,10 @@ OWIDSlider.Context.prototype = {
 			 * this.repaint();
 			 * } else {
 			 * // swipe down
-				this.currentImage++;
-				this.repaint();
-				}
-			}
+			 * this.currentImage++;
+			 * this.repaint();
+			 * }
+			 * }
 			 */
 
 			delete this.pendingTouches[ t.identifier ];
@@ -2267,7 +2279,7 @@ OWIDSlider.Context.prototype = {
 			var elementsSelector = this.CONTAINER_SELECTOR + ' ' + this.MAP_SELECTOR + " path[fill]:not([fill='" + fill + "'])";
 			var elements = document.querySelectorAll( elementsSelector );
 			for ( var i = 0; i < elements.length; i++ ) {
-		if ( elements[ i ].parentElement && elements[ i ].parentElement.id === 'swatches' ) {
+		if ( elements[ i ].parentNode && elements[ i ].parentNode.id === 'swatches' ) {
 		continue;
 		}
 				elements[ i ].setAttribute( 'fill-opacity', '0.1' );
@@ -2382,7 +2394,7 @@ OWIDSlider.Context.prototype = {
 		return $viewer;
 	},
 	populateTranslatedCountriesNames: function () {
-		var countryIds = Object.values( OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP );
+		var countryIds = Object.values( OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP ); // ES2017 'Object.values' method is forbidden                es-x/no-object-values
 		var that = this;
 		const chunkSize = 45;
 		const chunks = [];
@@ -2435,7 +2447,7 @@ OWIDSlider.Context.prototype = {
 		return Promise.all( chunkPromises ).then( function ( allChunkResults ) {
 			// Merge all chunk results into a single object
 			const accumResults = allChunkResults.reduce( function ( acc, chunkResult ) {
-				return Object.assign( acc, chunkResult );
+				return Object.assign( acc, chunkResult ); // ES2015 'Object.assign' method is forbidden  es-x/no-object-assign
 			}, {} );
 
 			// Process the accumulated results
