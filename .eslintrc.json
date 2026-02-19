@@ -9,15 +9,6 @@
     "$": "readonly"
   },
   "rules": {
-    // "no-mixed-spaces-and-tabs": "off",
-    // "eqeqeq": "off",
-    // "no-useless-concat": "off",
-    // "new-cap": "off",
-    // "jsdoc/require-param-type": "off",
-    // "jsdoc/require-asterisk-prefix": "off",
-    // "no-restricted-properties": "off",
-    // "no-tabs": "off",
-    // "camelcase": "off",
     "indent": "off",
     "block-scoped-var": "off",
     "es-x/no-block-scoped-variables": "off",
@@ -28,12 +19,9 @@
     "no-implicit-globals": "off",
     "no-undef": "off",
     "no-redeclare": "off",
-    "es-x/no-array-prototype-includes": "off",
     "es-x/no-string-prototype-includes": "off",
     "es-x/no-object-entries": "off",
     "es-x/no-destructuring": "off",
-    "es-x/no-string-prototype-replaceall": "off",
-    "es-x/no-object-values": "off",
     "es-x/no-object-assign": "off",
     "es-x/no-for-of-loops": "off"
   }

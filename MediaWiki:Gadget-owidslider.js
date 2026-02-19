@@ -267,9 +267,10 @@ var OWIDSlider = {
 		parseQueryParams: function () {
 			// Not allowed to use Object.fromEntries()
 			let res = Object.create( null );
-			for ( const [ key, value ] of new URLSearchParams( location.search ) ) { // ES2015 'for-of' statements are forbidden  es-x/no-for-of-loops
+			// Use forEach instead of for...of to avoid ES2015 dependency
+			new URLSearchParams( location.search ).forEach( function ( value, key ) {
 				res[ key ] = value;
-			}
+			} );
 			return res;
 		}
 	}, // end Core
@@ -772,12 +773,14 @@ var OWIDSlider = {
 		// We use SVGs in an html context not XML, so we need to be sure they are safe.
 		// This is a bit stricter than necessary, but owid graphs should have all this.
 		DOMPurify.addHook( 'uponSanitizeAttribute', function ( node, hook ) {
-			if ( [ 'font', 'clip-path', 'fill', 'filter', 'marker', 'marker-end', 'marker-mid', 'marker-start', 'mask', 'stroke', 'cursor' ].includes( hook.attrName ) ) {
+			var allowedAttrs = [ 'font', 'clip-path', 'fill', 'filter', 'marker', 'marker-end', 'marker-mid', 'marker-start', 'mask', 'stroke', 'cursor' ];
+			if ( allowedAttrs.indexOf( hook.attrName ) !== -1 ) {
 				if ( hook.attrValue.match( /url\((?!\s*['"]?#)|image-set\(|src\(/i ) ) {
 					hook.keepAttr = false;
 				}
 			}
-			if ( [ 'href', 'xlink:href' ].includes( hook.attrName ) ) {
+			var hrefAttrs = [ 'href', 'xlink:href' ];
+			if ( hrefAttrs.indexOf( hook.attrName ) !== -1 ) {
 				hook.keepAttr = false;
 			}
 		} );
@@ -911,7 +914,7 @@ var OWIDSlider = {
 			return;
 		}
 		var $viewer = OWIDSlider.getViewer();
-		backButtonTitle = mw.msg( 'OWIDSliderFrameBackDesktop' );
+		var backButtonTitle = mw.msg( 'OWIDSliderFrameBackDesktop' );
 
 		var config = {
 			size: 'full',
@@ -1143,7 +1146,7 @@ var OWIDSlider = {
 	convertThumbUrlToOriginal: function ( thumbUrl ) {
 		var urlParts = thumbUrl.split( '/' );
 		var fileName = urlParts.filter( function ( a ) {
-			return a && a.includes( '.svg' );
+			return a && a.indexOf( '.svg' ) !== -1;
 		} )[ 0 ];
 		var fileNameIndex = urlParts.indexOf( fileName );
 		var hashes = urlParts.slice( fileNameIndex - 2, fileNameIndex );
@@ -1299,7 +1302,7 @@ OWIDSlider.Context.prototype = {
 		this.$loading = this.createLoader();
 		var that = this;
 		// Chrome scrolls much faster than firefox
-		const SCROLL_SLOWDOWN = navigator.userAgent.includes( 'Chrome/' ) ? 5 : 2;
+		const SCROLL_SLOWDOWN = navigator.userAgent.indexOf( 'Chrome/' ) !== -1 ? 5 : 2;
 		this.pendingScrollDelta = 0;
 
 		// var containingWidth =
@@ -1376,7 +1379,7 @@ OWIDSlider.Context.prototype = {
 		} );
 		$svgContainer.on( 'mousedown', function ( event ) {
 			// prepare scroll by drag
-			mouseY = event.screenY; // remember mouse-position
+			var mouseY = event.screenY; // remember mouse-position
 			that.scrollobject = true; // set flag
 			return false;
 		} );
@@ -1882,7 +1885,8 @@ OWIDSlider.Context.prototype = {
 
 				// Then let's purify
 				svgData = OWIDSlider.purify( svgData );
-				svgData = svgData.replaceAll( '&nbsp;', '' ); // ES2021 'String.prototype.replaceAll' method is forbidden  es-x/no-string-prototype-replaceall
+				// svgData = svgData.replaceAll( '&nbsp;', '' ); // ES2021 'String.prototype.replaceAll' method is forbidden  es-x/no-string-prototype-replaceall
+				svgData = svgData.replace( /&nbsp;/g, '' );
 
 				parser = new DOMParser();
 		svgDoc = parser.parseFromString( svgData, 'image/svg+xml' );
@@ -1980,7 +1984,7 @@ OWIDSlider.Context.prototype = {
 				} )
 				.catch( function ( err ) {
 					that.onUrlLoaded();
-					console.log( 'Error loading svg data', svgUrl, gallery, i, err );
+					console.log( 'Error loading svg data', svgUrl, gallery, err );
 					resolve( false );
 				} );
 		} );
@@ -2278,7 +2282,7 @@ OWIDSlider.Context.prototype = {
 			var fill = e.target.getAttribute( 'fill' );
 			var elementsSelector = this.CONTAINER_SELECTOR + ' ' + this.MAP_SELECTOR + " path[fill]:not([fill='" + fill + "'])";
 			var elements = document.querySelectorAll( elementsSelector );
-			for ( var i = 0; i < elements.length; i++ ) {
+			for ( let i = 0; i < elements.length; i++ ) {
 		if ( elements[ i ].parentNode && elements[ i ].parentNode.id === 'swatches' ) {
 		continue;
 		}
@@ -2287,9 +2291,9 @@ OWIDSlider.Context.prototype = {
 			var targetElements = document.querySelectorAll(
 				this.CONTAINER_SELECTOR + ' ' + this.MAP_SELECTOR + " path[fill='" + fill + "']"
 			);
-			for ( var i = 0; i < targetElements.length; i++ ) {
-				id = targetElements[ i ].getAttribute( 'id' );
-				strokeWidth = targetElements[ i ].getAttribute( 'stroke-width' );
+			for ( let i = 0; i < targetElements.length; i++ ) {
+				const id = targetElements[ i ].getAttribute( 'id' );
+				const strokeWidth = targetElements[ i ].getAttribute( 'stroke-width' );
 				swatchsStrokeWidth[ id ] = strokeWidth;
 				targetElements[ i ].setAttribute(
 					'stroke-width',
@@ -2308,19 +2312,19 @@ OWIDSlider.Context.prototype = {
 			var elements = document.querySelectorAll(
 				this.CONTAINER_SELECTOR + ' ' + this.MAP_SELECTOR + " path[fill]:not([fill='" + fill + "'])"
 			);
-			for ( var i = 0; i < elements.length; i++ ) {
-				elements[ i ].setAttribute( 'fill-opacity', '1' );
-				id = elements[ i ].getAttribute( 'id' );
-				strokeWidth = swatchsStrokeWidth[ id ] || this.DEFAULT_STROKE_WIDTH;
-				elements[ i ].setAttribute( 'stroke-width', strokeWidth );
+			for ( let j = 0; j < elements.length; j++ ) {
+				elements[ j ].setAttribute( 'fill-opacity', '1' );
+				const id = elements[ j ].getAttribute( 'id' );
+				const strokeWidth = swatchsStrokeWidth[ id ] || this.DEFAULT_STROKE_WIDTH;
+				elements[ j ].setAttribute( 'stroke-width', strokeWidth );
 			}
 			var targetElements = document.querySelectorAll(
 				this.CONTAINER_SELECTOR + ' ' + this.MAP_SELECTOR + " path[fill='" + fill + "']"
 			);
-			for ( var i = 0; i < targetElements.length; i++ ) {
-				id = targetElements[ i ].getAttribute( 'id' );
-				strokeWidth = swatchsStrokeWidth[ id ] || this.DEFAULT_STROKE_WIDTH;
-				targetElements[ i ].setAttribute( 'stroke-width', strokeWidth );
+			for ( let k = 0; k < targetElements.length; k++ ) {
+				const id = targetElements[ k ].getAttribute( 'id' );
+				const strokeWidth = swatchsStrokeWidth[ id ] || this.DEFAULT_STROKE_WIDTH;
+				targetElements[ k ].setAttribute( 'stroke-width', strokeWidth );
 			}
 			e.target.setAttribute( 'stroke-width', this.DEFAULT_STROKE_WIDTH );
 		}
@@ -2394,13 +2398,20 @@ OWIDSlider.Context.prototype = {
 		return $viewer;
 	},
 	populateTranslatedCountriesNames: function () {
-		var countryIds = Object.values( OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP ); // ES2017 'Object.values' method is forbidden                es-x/no-object-values
+		// Use for...in loop instead of Object.values() to avoid ES2017 dependency
+		var countryIds = [];
+		for ( var key in OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP ) {
+			if ( Object.prototype.hasOwnProperty.call( OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP, key ) ) {
+				countryIds.push( OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP[ key ] );
+			}
+		}
+
 		var that = this;
 		const chunkSize = 45;
 		const chunks = [];
 
 		// Split countryIds into chunks
-		for ( let i = 0; i < countryIds.length; i += chunkSize ) {
+		for ( var i = 0; i < countryIds.length; i += chunkSize ) {
 			chunks.push( countryIds.slice( i, i + chunkSize ) );
 		}
 
@@ -2413,7 +2424,6 @@ OWIDSlider.Context.prototype = {
 				return setTimeout( resolve, delay );
 			} ).then( function () {
 				const ids = chunk.join( '|' );
-				// const url = 'https://www.wikidata.org/w/api.php?action=wbgetentities&ids=' + ids + '&format=json&props=labels&languages=' + that.language; /* eslint no-unused var */
 				var api = new mw.Api( {
 					userAgent: 'OWIDSlider',
 					ajax: {
@@ -2432,9 +2442,12 @@ OWIDSlider.Context.prototype = {
 					smaxage: 60 * 60
 				} ).then( function ( res ) {
 					const chunkResults = {};
-					Object.entries( res.entities ).forEach( function ( [ id, entity ] ) {
-						chunkResults[ id ] = entity.labels || {};
-					} );
+					// Use for...in loop instead of Object.entries() to avoid ES2015 dependency
+					for ( var id in res.entities ) {
+						if ( Object.prototype.hasOwnProperty.call( res.entities, id ) ) {
+							chunkResults[ id ] = res.entities[ id ].labels || {};
+						}
+					}
 					return chunkResults;
 				} ).catch( function ( error ) {
 					console.error( 'Error fetching labels for chunk:', error );
@@ -2445,19 +2458,29 @@ OWIDSlider.Context.prototype = {
 
 		// Wait for all chunks to complete and merge results
 		return Promise.all( chunkPromises ).then( function ( allChunkResults ) {
-			// Merge all chunk results into a single object
-			const accumResults = allChunkResults.reduce( function ( acc, chunkResult ) {
-				return Object.assign( acc, chunkResult ); // ES2015 'Object.assign' method is forbidden  es-x/no-object-assign
-			}, {} );
+			// Merge all chunk results into a single object using a simple loop
+			const accumResults = {};
+			for ( var j = 0; j < allChunkResults.length; j++ ) {
+				var chunkResult = allChunkResults[ j ];
+				// Use for...in loop instead of Object.assign() to avoid ES2015 dependency
+				for ( var key in chunkResult ) {
+					if ( Object.prototype.hasOwnProperty.call( chunkResult, key ) ) {
+						accumResults[ key ] = chunkResult[ key ];
+					}
+				}
+			}
 
 			// Process the accumulated results
-			Object.entries( accumResults ).forEach( function ( entry ) {
-				if ( entry[ 1 ][ that.language ] ) {
-					var name = OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP_REVERSE[ entry[ 0 ] ];
-					name = name.toLowerCase().replace( /[^a-z0-9]/g, '' );
-					that.translatedCountryNames[ name ] = entry[ 1 ][ that.language ].value;
+			for ( var entryKey in accumResults ) {
+				if ( Object.prototype.hasOwnProperty.call( accumResults, entryKey ) ) {
+					var entry = [ entryKey, accumResults[ entryKey ] ];
+					if ( entry[ 1 ][ that.language ] ) {
+						var name = OWIDSlider.OWID_WIKIDATA_COUNTRY_MAP_REVERSE[ entry[ 0 ] ];
+						name = name.toLowerCase().replace( /[^a-z0-9]/g, '' );
+						that.translatedCountryNames[ name ] = entry[ 1 ][ that.language ].value;
+					}
 				}
-			} );
+			}
 			that.toggleImg();
 
 			return accumResults;
