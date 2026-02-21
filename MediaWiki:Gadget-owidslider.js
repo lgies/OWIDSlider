@@ -1096,21 +1096,22 @@ var OWIDSlider = {
 		if ( min === 1e9 ) {
 			throw new Error( 'No images for slider' );
 		}
-		/* es-lint: no-unused-vars */
-		// var urls = this.getImagesUrls( imgMap );
-		// var context = new OWIDSlider.Context(
-		// $viewer,
-		// data,
-		// imgMap,
-		// urls,
-		// countriesUrls,
-		// countriesInfoUrls,
-		// width,
-		// height,
-		// min,
-		// max,
-		// viewMin
-		// );
+		var urls = this.getImagesUrls( imgMap );
+		// This constructors needs to stay because it initializes the image
+		// disregard /* es-lint: no-unused-vars */
+		var context = new OWIDSlider.Context(
+			$viewer,
+			data,
+			imgMap,
+			urls,
+			countriesUrls,
+			countriesInfoUrls,
+			width,
+			height,
+			min,
+			max,
+			viewMin
+		);
 	},
 
 	getSource: function ( imgElm, width, height ) {
@@ -1383,10 +1384,13 @@ OWIDSlider.Context.prototype = {
 			that.scrollobject = true; // set flag
 			return false;
 		} );
-		// $svgContainer.on( 'mouseup', function ( event ) {
-		// that.scrollobject = false; // set flag
-		// return false;
-		// } ); /* eslint no-unused var*/
+		// It would effect how dragging the mouse button works. that.scrollobject is from the outerscope, so it gets set to true in the mousedown handler, and affects how the mousemove handler works. Its important to set to false in the mouseup handler
+		// so the mousemove handler wont treat the action as a drag if the user releases the mouse button
+		// Disregard /* eslint no-unused var*/
+		$svgContainer.on( 'mouseup', function ( event ) {
+		that.scrollobject = false; // set flag
+		return false;
+		} );
 		$svgContainer.on( 'mousemove', function ( event ) {
 			if ( that.scrollobject && Math.abs( mouseY - event.screenY ) > 10 ) {
 				var offset = mouseY < event.screenY ? 1 : -1;
