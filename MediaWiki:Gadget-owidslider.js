@@ -70,8 +70,12 @@ var OWIDSlider = {
 				OWIDSliderSliderLabel: 'Select image',
 				OWIDSliderSelectRegion: 'Select region',
 				OWIDSliderPlayLabel: 'Show slideshow',
-				OWIDSliderShowRegionGraph: "Graph",
-				OWIDSliderLoading: 'Loading... $1%'
+				OWIDSliderShowRegionGraph: 'Graph',
+				OWIDSliderLoading: 'Loading... $1%',
+				OWIDSliderDoubleClickLabel: 'double click to view line chart for :',
+				OWIDSliderViewTypeRegion: 'region',
+				OWIDSliderViewTypeCountry: 'country',
+				OWIDSliderRegionDataNotAvailable: 'region data is not available'
 			},
 			es: {
 				OWIDSliderFrameBack: 'Atrás',
@@ -181,8 +185,8 @@ var OWIDSlider = {
 				OWIDSliderSliderLabel: 'Resim seç',
 				OWIDSliderSelectRegion: 'Bölge seçin',
 				OWIDSliderPlayLabel: 'Slayt gösterisini göster',
-				OWIDSliderLoading: 'Yükleniyor... $1%'	
-			},	
+				OWIDSliderLoading: 'Yükleniyor... $1%'
+			},
 			uk: {
 				OWIDSliderFrameBack: 'Назад',
 				OWIDSliderFrameBackDesktop: 'Повернутись до статті',
@@ -567,6 +571,257 @@ var OWIDSlider = {
 		Yemen: 'YEM',
 		Zambia: 'ZMB',
 		Zimbabwe: 'ZWE'
+	},
+
+	OWID_COUNTRY_REGIONS: {
+		AFG: 'Asia',
+		ALA: 'Europe',
+		ALB: 'Europe',
+		DZA: 'Africa',
+		ASM: 'Oceania',
+		AND: 'Europe',
+		AGO: 'Africa',
+		AIA: 'NorthAmerica',
+		ATA: 'Antarctica',
+		ATG: 'NorthAmerica',
+		ARG: 'SouthAmerica',
+		ARM: 'Asia',
+		ABW: 'NorthAmerica',
+		AUS: 'Oceania',
+		AUT: 'Europe',
+		AZE: 'Asia',
+		BHS: 'NorthAmerica',
+		BHR: 'Asia',
+		BGD: 'Asia',
+		BRB: 'NorthAmerica',
+		BLR: 'Europe',
+		BEL: 'Europe',
+		BLZ: 'NorthAmerica',
+		BEN: 'Africa',
+		BMU: 'NorthAmerica',
+		BTN: 'Asia',
+		BOL: 'SouthAmerica',
+		BES: 'NorthAmerica',
+		BIH: 'Europe',
+		BWA: 'Africa',
+		BVT: 'Antarctica',
+		BRA: 'SouthAmerica',
+		IOT: 'Africa',
+		BRN: 'Asia',
+		BGR: 'Europe',
+		BFA: 'Africa',
+		BDI: 'Africa',
+		KHM: 'Asia',
+		CMR: 'Africa',
+		CAN: 'NorthAmerica',
+		CPV: 'Africa',
+		CYM: 'NorthAmerica',
+		CAF: 'Africa',
+		TCD: 'Africa',
+		CHL: 'SouthAmerica',
+		CHN: 'Asia',
+		CXR: 'Oceania',
+		CCK: 'Oceania',
+		COL: 'SouthAmerica',
+		COM: 'Africa',
+		COG: 'Africa',
+		COD: 'Africa',
+		COK: 'Oceania',
+		CRI: 'NorthAmerica',
+		CIV: 'Africa',
+		HRV: 'Europe',
+		CUB: 'NorthAmerica',
+		CUW: 'NorthAmerica',
+		CYP: 'Europe',
+		CZE: 'Europe',
+		DNK: 'Europe',
+		DJI: 'Africa',
+		DMA: 'NorthAmerica',
+		DOM: 'NorthAmerica',
+		ECU: 'SouthAmerica',
+		EGY: 'Africa',
+		SLV: 'NorthAmerica',
+		GNQ: 'Africa',
+		ERI: 'Africa',
+		EST: 'Europe',
+		ETH: 'Africa',
+		FLK: 'SouthAmerica',
+		FRO: 'Europe',
+		FJI: 'Oceania',
+		FIN: 'Europe',
+		FRA: 'Europe',
+		GUF: 'SouthAmerica',
+		PYF: 'Oceania',
+		ATF: 'Antarctica',
+		GAB: 'Africa',
+		GMB: 'Africa',
+		GEO: 'Asia',
+		DEU: 'Europe',
+		GHA: 'Africa',
+		GIB: 'Europe',
+		GRC: 'Europe',
+		GRL: 'NorthAmerica',
+		GRD: 'NorthAmerica',
+		GLP: 'NorthAmerica',
+		GUM: 'Oceania',
+		GTM: 'NorthAmerica',
+		GGY: 'Europe',
+		GIN: 'Africa',
+		GNB: 'Africa',
+		GUY: 'SouthAmerica',
+		HTI: 'NorthAmerica',
+		HMD: 'Antarctica',
+		VAT: 'Europe',
+		HND: 'NorthAmerica',
+		HKG: 'Asia',
+		HUN: 'Europe',
+		ISL: 'Europe',
+		IND: 'Asia',
+		IDN: 'Asia',
+		IRN: 'Asia',
+		IRQ: 'Asia',
+		IRL: 'Europe',
+		IMN: 'Europe',
+		ISR: 'Asia',
+		ITA: 'Europe',
+		JAM: 'NorthAmerica',
+		JPN: 'Asia',
+		JEY: 'Europe',
+		JOR: 'Asia',
+		KAZ: 'Asia',
+		KEN: 'Africa',
+		KIR: 'Oceania',
+		PRK: 'Asia',
+		KOR: 'Asia',
+		KWT: 'Asia',
+		KGZ: 'Asia',
+		LAO: 'Asia',
+		LVA: 'Europe',
+		LBN: 'Asia',
+		LSO: 'Africa',
+		LBR: 'Africa',
+		LBY: 'Africa',
+		LIE: 'Europe',
+		LTU: 'Europe',
+		LUX: 'Europe',
+		MAC: 'Asia',
+		MKD: 'Europe',
+		MDG: 'Africa',
+		MWI: 'Africa',
+		MYS: 'Asia',
+		MDV: 'Asia',
+		MLI: 'Africa',
+		MLT: 'Europe',
+		MHL: 'Oceania',
+		MTQ: 'NorthAmerica',
+		MRT: 'Africa',
+		MUS: 'Africa',
+		MYT: 'Africa',
+		MEX: 'NorthAmerica',
+		FSM: 'Oceania',
+		MDA: 'Europe',
+		MCO: 'Europe',
+		MNG: 'Asia',
+		MNE: 'Europe',
+		MSR: 'NorthAmerica',
+		MAR: 'Africa',
+		MOZ: 'Africa',
+		MMR: 'Asia',
+		NAM: 'Africa',
+		NRU: 'Oceania',
+		NPL: 'Asia',
+		NLD: 'Europe',
+		NCL: 'Oceania',
+		NZL: 'Oceania',
+		NIC: 'NorthAmerica',
+		NER: 'Africa',
+		NGA: 'Africa',
+		NIU: 'Oceania',
+		NFK: 'Oceania',
+		MNP: 'Oceania',
+		NOR: 'Europe',
+		OMN: 'Asia',
+		PAK: 'Asia',
+		PLW: 'Oceania',
+		PSE: 'Asia',
+		PAN: 'NorthAmerica',
+		PNG: 'Oceania',
+		PRY: 'SouthAmerica',
+		PER: 'SouthAmerica',
+		PHL: 'Asia',
+		PCN: 'Oceania',
+		POL: 'Europe',
+		PRT: 'Europe',
+		PRI: 'NorthAmerica',
+		QAT: 'Asia',
+		REU: 'Africa',
+		ROU: 'Europe',
+		RUS: 'Europe',
+		RWA: 'Africa',
+		BLM: 'NorthAmerica',
+		SHN: 'Africa',
+		KNA: 'NorthAmerica',
+		LCA: 'NorthAmerica',
+		MAF: 'NorthAmerica',
+		SPM: 'NorthAmerica',
+		VCT: 'NorthAmerica',
+		WSM: 'Oceania',
+		SMR: 'Europe',
+		STP: 'Africa',
+		SAU: 'Asia',
+		SEN: 'Africa',
+		SYC: 'Africa',
+		SLE: 'Africa',
+		SGP: 'Asia',
+		SXM: 'NorthAmerica',
+		SVK: 'Europe',
+		SVN: 'Europe',
+		SLB: 'Oceania',
+		SOM: 'Africa',
+		ZAF: 'Africa',
+		SGS: 'Antarctica',
+		SSD: 'Africa',
+		ESP: 'Europe',
+		LKA: 'Asia',
+		SDN: 'Africa',
+		SUR: 'SouthAmerica',
+		SJM: 'Europe',
+		SWZ: 'Africa',
+		SWE: 'Europe',
+		CHE: 'Europe',
+		SYR: 'Asia',
+		TWN: 'Asia',
+		TJK: 'Asia',
+		TZA: 'Africa',
+		THA: 'Asia',
+		TLS: 'Asia',
+		TGO: 'Africa',
+		TKL: 'Oceania',
+		TON: 'Oceania',
+		TTO: 'NorthAmerica',
+		TUN: 'Africa',
+		TUR: 'Asia',
+		TKM: 'Asia',
+		TCA: 'NorthAmerica',
+		TUV: 'Oceania',
+		UGA: 'Africa',
+		UKR: 'Europe',
+		ARE: 'Asia',
+		GBR: 'Europe',
+		USA: 'NorthAmerica',
+		UMI: 'Oceania',
+		URY: 'SouthAmerica',
+		UZB: 'Asia',
+		VUT: 'Oceania',
+		VEN: 'SouthAmerica',
+		VNM: 'Asia',
+		VGB: 'NorthAmerica',
+		VIR: 'NorthAmerica',
+		WLF: 'Oceania',
+		ESH: 'Africa',
+		YEM: 'Asia',
+		ZMB: 'Africa',
+		ZWE: 'Africa'
 	},
 
 	OWID_WIKIDATA_COUNTRY_MAP: {
@@ -1057,9 +1312,9 @@ var OWIDSlider = {
 			if ( !elm ) {
 				throw new Error( 'Could not find gallery with id ' + galleryId );
 			}
-			if ( galleryName === 'AllCountries') {
+			if ( galleryName === 'AllCountries' ) {
 				years[ galleryName ] = JSON.parse( elm.dataset.owidsliderCountry );
-			} else if (galleryName === 'RegionsCharts') {
+			} else if ( galleryName === 'RegionsCharts' ) {
 				years[ galleryName ] = JSON.parse( elm.dataset.owidsliderRegionsChart );
 			} else {
 				years[ galleryName ] = JSON.parse( elm.dataset.owidsliderYear );
@@ -1079,7 +1334,7 @@ var OWIDSlider = {
 					if ( imgs[ j ].nodeName !== 'IMG' ) {
 						continue;
 					}
-					regionsChartsUrls[ years[ galleryName ][ j ] ]  = this.convertThumbUrlToOriginal(
+					regionsChartsUrls[ years[ galleryName ][ j ] ] = this.convertThumbUrlToOriginal(
 						imgs[ j ].getAttribute( 'src' )
 					);
 					if ( imgs[ j ].parentElement.href ) {
@@ -1272,7 +1527,7 @@ var OWIDSlider = {
 		this.countriesInfoUrls = countriesInfoUrls;
 		this.regionsChartsUrls = regionsChartsUrls;
 		this.regionsChartsInfoUrls = regionsChartsInfoUrls;
-		console.log({regionsChartsUrls, regionsChartsInfoUrls});
+		console.log( { regionsChartsUrls: regionsChartsUrls, regionsChartsInfoUrls: regionsChartsInfoUrls } );
 		this.translatedCountryNames = Object.create( null );
 		this.$viewer = $viewer;
 		this.loop = !!config.loop;
@@ -1440,7 +1695,7 @@ OWIDSlider.Context.prototype = {
 				.attr( 'id', 'OWIDSliderViewSelector' )
 				.attr( 'class', 'owid-select' );
 			for ( var i in this.imgs ) {
-				var optionName = i.replace(/([A-Z])/g, ' $1').trim();
+				var optionName = i.replace( /([A-Z])/g, ' $1' ).trim();
 				$select.append(
 					$( '<option>' )
 						.attr( { value: i, selected: this.currentView === i } )
@@ -1464,8 +1719,26 @@ OWIDSlider.Context.prototype = {
 			$select = selectContainer;
 		}
 
+		var $viewTypeLabel = $( '<span>' ).text( 'double click to view line chart for :' );
+		var $viewTypeSelect = $( '<select>' )
+			.attr( 'id', 'OWIDSliderViewTypeSelector' )
+			.attr( 'class', 'owid-select' );
+		$viewTypeSelect.append( $( '<option>' ).val( 'country' ).text( 'country' ) );
+		$viewTypeSelect.append( $( '<option>' ).val( 'region' ).text( 'region' ) );
+		$viewTypeSelect.val( 'country' );
+		var $viewTypeContainer = $( '<div>' ).attr( 'class', 'owid-view-type-container' );
+		$viewTypeContainer.append( $viewTypeLabel ).append( $viewTypeSelect );
+		$viewTypeSelect.on( 'change', function ( e ) {
+			that.viewType = e.target.value;
+			$( '#OWIDSliderMessage' ).hide();
+		} );
+		this.viewType = 'country';
+		var $messageDiv = $( '<div>' ).attr( 'id', 'OWIDSliderMessage' ).css( 'display', 'none' ).text( 'region data is not available' );
+
 		var $container = $( '<div class="OWIDSliderImgContainer"></div>' )
-			.append( $select );
+			.append( $select )
+			.append( $viewTypeContainer )
+			.append( $messageDiv );
 		$container.append( $svgContainer )
 			.append( $creditDiv )
 			.append( this.$sliderContainer );
@@ -1489,6 +1762,9 @@ OWIDSlider.Context.prototype = {
 
 		this.cachedSvgs = Object.create( null );
 		this.cachedCountriesSvgs = Object.create( null );
+		this.regionsSvgUrls = Object.create( null );
+		this.regionsInfoUrls = Object.create( null );
+		this.cachedRegionsSvgs = Object.create( null );
 
 		this.getUrls();
 		// this.toggleImg();
@@ -1499,13 +1775,13 @@ OWIDSlider.Context.prototype = {
 		}
 		this.$slider.focus();
 	},
-	loadRegionChartSwitch: function() {
-		if (this.$regionChartBtnContainer) {
+	loadRegionChartSwitch: function () {
+		if ( this.$regionChartBtnContainer ) {
 			this.$regionChartBtnContainer.remove();
 		}
 
 		this.$regionChartBtnContainer = null;
-		if (this.regionsChartsUrls != null && this.regionsChartsUrls[this.currentView]) {
+		if ( this.regionsChartsUrls !== null && this.regionsChartsUrls[ this.currentView ] ) {
 			this.$regionChartBtnContainer = $( '<div>' ).attr( 'class', 'owid-region-chart-container' );
 			var regionBtnLabel = mw.msg( 'OWIDSliderShowRegionGraph' );
 			var $regionBtn = $( '<button></button>' )
@@ -1519,12 +1795,12 @@ OWIDSlider.Context.prototype = {
 			$regionBtn.on(
 				'click',
 				function () {
-					this.loadRegionChart(this.currentView);
+					this.loadRegionChart( this.currentView );
 					this.$regionChartBtnContainer.remove();
 				}.bind( this )
 			);
-			this.$regionChartBtnContainer.append($regionBtn);
-			this.$countrySelect.after(this.$regionChartBtnContainer);
+			this.$regionChartBtnContainer.append( $regionBtn );
+			this.$countrySelect.after( this.$regionChartBtnContainer );
 		}
 	},
 	getMaxImgDim: function () {
@@ -1720,7 +1996,7 @@ OWIDSlider.Context.prototype = {
 			svgEl.attr( 'height' ).match( /^\d+(px)?$/ )
 		) {
 			// If no viewbox but have width & height, make one so that we can properly resize image
-			svgEl.attr( 'viewBox', '0 0 ' + parseInt( svgEl.attr( 'width' ) ) + ' ' + parseInt( svgEl.attr( 'height' ) ) )
+			svgEl.attr( 'viewBox', '0 0 ' + parseInt( svgEl.attr( 'width' ) ) + ' ' + parseInt( svgEl.attr( 'height' ) ) );
 		}
 		svgEl.removeAttr( 'width' );
 		svgEl.removeAttr( 'height' );
@@ -2233,7 +2509,7 @@ OWIDSlider.Context.prototype = {
 			delete this.pendingTouches[ t.identifier ];
 		}
 	},
-	loadRegionChart: function (region) {
+	loadRegionChart: function ( region ) {
 		var url = this.regionsChartsUrls[ region ];
 		if ( url ) {
 			if ( this.cachedCountriesSvgs[ url ] ) {
@@ -2447,7 +2723,16 @@ OWIDSlider.Context.prototype = {
 		var clickedCountryCode = OWIDSlider.OWID_COUNTRY_CODES[ clickedId ];
 		if ( clickedCountryCode ) {
 			this.onCountryHoverLeave( e );
-			this.loadCountryChart( clickedCountryCode );
+			if ( this.viewType === 'country' ) {
+				this.loadCountryChart( clickedCountryCode );
+			} else {
+				var region = OWIDSlider.OWID_COUNTRY_REGIONS[ clickedCountryCode ];
+				if ( region ) {
+					this.loadRegionSvgChart( region, clickedCountryCode );
+				} else {
+					this.loadCountryChart( clickedCountryCode );
+				}
+			}
 		}
 		}.bind( this );
 	},
@@ -2695,7 +2980,46 @@ OWIDSlider.Context.prototype = {
 			}.bind( this )
 		);
 		$( '.OWIDSliderSVGContainer' ).before( $backContainer );
+	},
+
+	loadRegionSvgChart: function ( region, countryCode ) {
+		var url = this.regionsSvgUrls[ region ];
+		if ( url ) {
+			if ( this.cachedRegionsSvgs[ url ] ) {
+				this.paintRegionChart( this.cachedRegionsSvgs[ url ] );
+				this.$credit[ 0 ].href = this.regionsInfoUrls[ region ];
+			} else {
+				var that = this;
+				this.originalContainerContent = this.$svgContainer.html();
+				this.$svgContainer.html( this.$loader.html() );
+				fetch( url )
+					.then( function ( data ) {
+						return data.text();
+					} )
+					.then( function ( content ) {
+						content = OWIDSlider.purify( content );
+						that.cachedRegionsSvgs[ url ] = content;
+						that.setSvg( that.originalContainerContent );
+						that.paintRegionChart( content );
+						that.$credit[ 0 ].href = that.regionsInfoUrls[ region ];
+					} )
+					.catch( function ( err ) {
+						console.log( 'Error getting region svg', err );
+					} );
+			}
+		} else {
+			$( '#OWIDSliderMessage' ).show();
+			this.viewType = 'country';
+			$( '#OWIDSliderViewTypeSelector' ).val( 'country' );
+			this.loadCountryChart( countryCode );
+		}
+	},
+
+	paintRegionChart: function ( content ) {
+		var scaledContent = $( content );
+		this.applyCountryChartPaint( scaledContent );
 	}
+
 };
 
 // Include jquery.mousewheel dependency.
